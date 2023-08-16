@@ -61,8 +61,14 @@ def process_file():
                                 select_all_var.set(False)
                                 for extra_widget in extras:
                                     extra_widget.grid_forget()
-                            for i, model in enumerate(selected_models):
-                                model_button = tk.Button(analysis_tab, text=model.name, command=lambda:Image.open(os.path.join(parentPath, f"{model.name.strip().replace(' ', '_').strip().lower()}.jpg")).show())
+                            def open_graph_image(m_name):
+                                path = f"{m_name.strip().replace(' ', '_').strip().lower()}.jpg"
+                                path = os.path.join(parentPath, path)
+                                image_of_graph = Image.open(path)
+                                print(f"Opening {path}")
+                                image_of_graph.show()
+                            for i, m in enumerate(selected_models):
+                                model_button = tk.Button(analysis_tab, text=m.name, command=lambda m_name=m.name:open_graph_image(m_name))
                                 model_button.grid(row=10, column=i, padx=2, pady=2, sticky="ew")
                                 extras.append(model_button)
                             extras += [set_test_percentage,set_labels_button,test_selection,test_percentage_input,selection_label_x,x_dropdown,selection_label_y, y_dropdown]
@@ -71,7 +77,7 @@ def process_file():
                     except ValueError:
                         status_label.config(text="Please enter an integer")
                         
-                set_test_percentage = tk.Button(analysis_tab, text="Set Test % and Download", command=set_test_size)
+                set_test_percentage = tk.Button(analysis_tab, text="Set Test % and Download Models", command=set_test_size)
                 set_test_percentage.grid(row=9, column=0, columnspan=3, padx=5, pady=5, sticky="ew")
                 test_selection = tk.Label(analysis_tab, text="Enter test percentage (20% recommended)")
                 test_percentage_input= tk.Entry(analysis_tab, width=10)
@@ -127,7 +133,7 @@ def load_model():
 
 app = tk.Tk()
 app.title("ECL Predictive Analysis Interface")
-app.iconbitmap(r"C:\Users\shashg\Desktop\Programming\PythonPrograms\GUi\models_gui\maxresdefault.ico")
+app.iconbitmap("maxresdefault.ico")
 
 app_tab_book = Notebook(app)
 app_tab_book.grid(row=0, column=0, sticky='nsew')
@@ -143,7 +149,7 @@ app_tab_book.add(prediction_tab, text=predict_tab_text)
 app_tab_book.bind("<<NotebookTabChanged>>", on_tab_selected)
 
 #Analysis Tab elements
-img = Image.open(r"C:\Users\shashg\Desktop\Programming\PythonPrograms\GUi\models_gui\mmne.jpg")
+img = Image.open("mmne.jpg")
 img = img.resize((200, (200*img.height//img.width) ))
 img = ImageTk.PhotoImage(img)
 logo_label = tk.Label(analysis_tab, image=img)
