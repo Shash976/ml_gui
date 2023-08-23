@@ -9,8 +9,9 @@ from sklearn.model_selection import train_test_split
 from sklearn.metrics import mean_squared_error, mean_absolute_error, r2_score
 
 def process_main(x,y,df, test_size, parentPath, models):
-    x.original = df.drop([y.label], axis=1)
     y.original = df[y.label]
+    if x.label in df.columns:
+        x.original = df.drop([col for col in df.columns if col != x.label], axis=1)
     x.train, x.test, y.train, y.test = train_test_split(x.original.values,y.original.values, test_size=test_size, random_state=10)
     for model in models:
         try:
