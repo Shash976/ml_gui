@@ -1,6 +1,6 @@
 from cv2 import imread, cvtColor, inRange
-from processing import makeExcel, os, np
-from model_def import x,y
+from processing import makeExcel, os, np, pd
+from multiprocessing import Pool
 
 data = {
     "Intensity": [],
