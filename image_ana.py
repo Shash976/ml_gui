@@ -8,17 +8,25 @@ data = pd.DataFrame(columns=[y, x])
 VAL_RANGES = [210, 175,170, 160,140,80,55, 40]
 
 def processFolder(folder_path):
-    paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    for path in paths:
-        try:
-            concentration = float(os.path.split(path)[-1].split(" ")[0])
-            for image_path in [os.path.join(path, image) for image in os.listdir(path) if image.endswith((".jpg", ".jpeg", ".png"))]:
-                mean, min_lightness = getMean(image_path, concentration)
-                data["Intensity"].append(concentration)
-                data["Concentration"].append(mean)
-        except Exception as e:
-            continue
-    makeExcel(os.path.join(folder_path, "data.xlsx"), data, "Intensity")
+    subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
+    for subfolder in subfolder_paths:
+        singleFolder(subfolder)
+    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=y)
+
+def singleFolder(subfolder):
+    try:
+        concentration = float(os.path.split(subfolder)[-1].split(" ")[0])
+        print(concentration)
+        images = [os.path.join(subfolder, image_path) for image_path in os.listdir(subfolder) if image_path.endswith((".jpg", ".png", ".jpeg"))]
+        for image_path in images:
+            print("\t----------------------------------------------------------------------------------------")
+            print(f"\t working with {os.path.split(image_path)[-1]}")
+            image = imread(image_path)
+            mean = getMean(image, concentration)
+            print(f"\t\t Intensity: {mean}")
+            data.loc[len(data)] = [concentration, mean]
+    except Exception as e:
+        print(f"Error, issue is {e}")
 
 def getMean(image_path, concentration):
     image = imread(image_path)
