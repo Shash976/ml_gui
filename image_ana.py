@@ -2,10 +2,10 @@ from cv2 import imread, cvtColor, inRange
 from processing import makeExcel, os, np, pd
 from multiprocessing import Pool
 
-data = {
-    "Intensity": [],
-    "Concentration": []
-}
+y = "Concentration"
+x = "Intensity"
+data = pd.DataFrame(columns=[y, x])
+VAL_RANGES = [210, 175,170, 160,140,80,55, 40]
 
 def processFolder(folder_path):
     paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
