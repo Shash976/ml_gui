@@ -112,7 +112,7 @@ def process_main(x,y,df, test_size, parentPath, models):
 
 
 def makeExcel(path, data, sortby = None):
-    df = pd.DataFrame(data)
+    df = data if type(data) is pd.DataFrame else pd.DataFrame(data)
 
     # Sort the DataFrame in ascending order
     if sortby:
