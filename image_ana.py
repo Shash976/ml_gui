@@ -3,8 +3,8 @@ from processing import makeExcel, os, np
 from model_def import x,y
 
 data = {
-    x.label: [],
-    y.label: []
+    "Intensity": [],
+    "Concentration": []
 }
 
 def processFolder(folder_path):
@@ -14,11 +14,11 @@ def processFolder(folder_path):
             concentration = float(os.path.split(path)[-1].split(" ")[0])
             for image_path in [os.path.join(path, image) for image in os.listdir(path) if image.endswith((".jpg", ".jpeg", ".png"))]:
                 mean, min_lightness = getMean(image_path, concentration)
-                data[x.label].append(concentration)
-                data[y.label].append(mean)
+                data["Intensity"].append(concentration)
+                data["Concentration"].append(mean)
         except Exception as e:
             continue
-    makeExcel(os.path.join(folder_path, "data.xlsx"), data, x.label)
+    makeExcel(os.path.join(folder_path, "data.xlsx"), data, "Intensity")
 
 def getMean(image_path, concentration):
     image = imread(image_path)
@@ -39,10 +39,10 @@ def getMean(image_path, concentration):
             mean = np.mean(pixels)
             print(f"\t original mean is {mean} at {min_lightness}")
 
-            prev_mean = data[y.label][-1]
-            if concentration != data[x.label][-1]:
+            prev_mean = data["Concentration"][-1]
+            if concentration != data["Intensity"][-1]:
                 print("\t concentrations UNEQUAL")
-            elif data[x.label][-1] == concentration:
+            elif data["Intensity"][-1] == concentration:
                 print("\t concentration are EQUAL")
             t_lightness = min_lightness
             test_mean = mean
