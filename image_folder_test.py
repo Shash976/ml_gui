@@ -88,6 +88,7 @@ def set_mean(image, prev_light):
     t_pixels = np.array(t_pixels)
     test_mean = np.mean(t_pixels)
     return test_mean
+
 """
 Model:
 
