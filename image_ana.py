@@ -64,3 +64,16 @@ def getMean(image,concentration):
             break
     return mean
 
+
+def calculateMean(image, hsv_image, lightness):
+    min_range, max_range = [np.array([110,170, lightness]), np.array([120, 255,255])]
+    mask = inRange(hsv_image, min_range, max_range)
+    print("\t\t\t working... line 69")
+    required_pixels = image[mask==255]
+    print("\t\t\t working... line 70; size of required pixels is ", required_pixels.shape[0], " at lightness ", lightness)
+    mean =0
+    if required_pixels.shape[0] > 0:
+        print("\t\t\t working... line 72; calculated mean is ")
+        mean = np.mean(required_pixels)
+        print(f"\t\t\t\t {mean} at line 75")
+    return mean, required_pixels.shape[0]
