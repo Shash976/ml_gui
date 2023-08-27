@@ -1,6 +1,5 @@
 from cv2 import imread, cvtColor, inRange
 from processing import makeExcel, os, np, pd
-from multiprocessing import Pool
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
 
 y = "Concentration"
@@ -11,8 +10,8 @@ basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=INFO)
 
 def processFolder(folder_path):
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    for subfolder in subfolder_paths:
-        singleFolder(subfolder)
+    for folder in subfolder_paths:
+        singleFolder(folder)
     makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=y)
 
 def singleFolder(subfolder):
@@ -54,7 +53,7 @@ def getMean(image,concentration):
                     t_lightness = VAL_RANGES[VAL_RANGES.index(t_lightness)-1]
                     debug("\t\t\t working... line 50")
                 t_mean, _ = calculateMean(image, hsv_img, t_lightness)
-                info("\t\t\t working... line 53 t_mean is ", t_mean, " at lightness ", t_lightness)
+                info(f"\t\t\t working... line 53 t_mean is {t_mean} at lightness {t_lightness}")
             mean = t_mean
             debug("\t\t\t working... line 56")
             lightness = t_lightness
@@ -71,7 +70,7 @@ def calculateMean(image, hsv_image, lightness):
     mask = inRange(hsv_image, min_range, max_range)
     debug("\t\t\t working... line 69")
     required_pixels = image[mask==255]
-    info("\t\t\t working... line 70; size of required pixels is ", required_pixels.shape[0], " at lightness ", lightness)
+    info(f"\t\t\t working... line 70; size of required pixels is {required_pixels.shape[0]} at lightness {lightness}")
     mean =0
     if required_pixels.shape[0] > 0:
         debug("\t\t\t working... line 72; calculated mean is ")
