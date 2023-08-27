@@ -2,9 +2,9 @@ from cv2 import imread, cvtColor, inRange
 from processing import makeExcel, os, np, pd
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
 
-y = "Concentration"
-x = "Intensity"
-data = pd.DataFrame(columns=[y, x])
+Y = "Concentration"
+X = "Intensity"
+DATA = pd.DataFrame(columns=[Y, X])
 VAL_RANGES = [210, 175,170, 160,140,80,55, 40]
 basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=INFO)
 
