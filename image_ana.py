@@ -6,41 +6,43 @@ Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
 VAL_RANGES = [210, 175,170, 160,140,80,55, 40]
-basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=INFO)
+basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=WARNING)
 
-def processFolder(folder_path):
+def processFolder(folder_path, progress_bar, status_label):
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    for folder in subfolder_paths:
-        singleFolder(folder)
-    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=y)
+    total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg"))]
+    for i, image in enumerate(total_images):
+        try:
+            for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
+                try:
+                    conc=float(part)
+                except:
+                    continue
+            status_label.config(text="Processing....")                       
+            mean = getMean(image, conc, data_frame=DATA, X=X, Y=Y)
+            progress_bar["value"] = i*100//(len(total_images)-1)
+            progress_bar.update_idletasks()
+            DATA.loc[len(DATA)] = [conc, mean]
+        except Exception as e:
+            print(f"Error - > {e}")
+            return
+    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby=Y)
+    return
 
-def singleFolder(subfolder):
-    try:
-        concentration = float(os.path.split(subfolder)[-1].split(" ")[0])
-        print(concentration)
-        images = [os.path.join(subfolder, image_path) for image_path in os.listdir(subfolder) if image_path.endswith((".jpg", ".png", ".jpeg"))]
-        for image_path in images:
-            debug(f"\t working with {os.path.split(image_path)[-1]}")
-            image = imread(image_path)
-            mean = getMean(image, concentration)
-            info(f"\t\t Intensity: {mean}")
-            data.loc[len(data)] = [concentration, mean]
-    except Exception as e:
-        error(f"Error, issue is {e}")
-
-def getMean(image,concentration):
+def getMean(image,concentration, data_frame=DATA, X = X, Y=Y):
+    image  = imread(image) if type(image) is str else image
     mean = 0
     hsv_img = cvtColor(image, 40)
-    print("\t\t\t working... line 32")
+    debug("\t\t\t working... line 32")
     for lightness in VAL_RANGES:
         mean, p_length = calculateMean(image, hsv_img, lightness)
         debug("\t\t\t working... line 35")
         if p_length < 10000:
             debug("\t\t\t working... line 37")
             continue 
-        elif len(data) > 2:
-            prev_mean = data[x].iloc[-1]
-            req_range = 7 if data[y].iloc[-1] == concentration else 17
+        elif len(data_frame) > 2:
+            prev_mean = data_frame[X].iloc[-1]
+            req_range = 7 if data_frame[Y].iloc[-1] == concentration else 17
             debug("\t\t\t working... line 42")
             t_mean = mean
             t_lightness = lightness
@@ -77,3 +79,10 @@ def calculateMean(image, hsv_image, lightness):
         mean = np.mean(required_pixels)
         info(f"\t\t\t\t {mean} at line 75")
     return mean, required_pixels.shape[0]
+
+def is_float(x):
+    try:
+        n = float(x)
+        return True
+    except Exception as e:
+        return False
