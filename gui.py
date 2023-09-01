@@ -1,12 +1,14 @@
-from image_ana import processFolder
-from processing import ML_Model, process_main, x, y
+from image_ana import getMean, is_float, processFolder, calculateMean
+from processing import ML_Model, process_main, x, y, makeExcel
 import tkinter as tk
+from cv2 import imread, cvtColor
 from tkinter import filedialog
 from tkinter.ttk import *
 from PIL import Image, ImageTk
 from prediction import load, predict_value, download_predictions
 import pandas as pd
 import os
+from time import time
 
 def browse_path(entry_path, file_types=[("Excel Files", "*.xlsx")], file=True):
     if file:
@@ -32,8 +34,6 @@ def select_all_models():
         listbox_models.select_set(0, tk.END)  # Select all items
     else:
         listbox_models.selection_clear(0, tk.END)  # Deselect all items
-
-
 
 def process_file():
     filepath = analysis_file_path.get()
@@ -118,22 +118,30 @@ def load_model():
     if os.path.exists(path):
         loaded_models = load(path)
         def predict_button_click():
-            x_val = predict_entry.get()
             try:
-                x_val = float(x_val.strip())
+                image = imread(predict_image_entry.get().strip())
+                hsv_img = cvtColor(image,40)
+                x_val,_,_ = calculateMean(imread(predict_image_entry.get().strip()), hsv_img, 210, 8500)
+                for i in [175,170, 160, 140, 80, 55, 40]:
+                    if x_val == 0:
+                        x_val,_,_ = calculateMean(imread(predict_image_entry.get().strip()), hsv_img, i, 8500)
+                    else:
+                        break
                 predictions, label_text = predict_value(x_val, loaded_models)
                 prediction_label.config(text= label_text)
-                download_prediction = tk.Button(prediction_tab, text="Download Prediction", command=lambda:(download_predictions(x_val,predictions, path), status_label.config(text="Downloaded")))
+                download_prediction = tk.Button(prediction_tab, text=f"Download predicition for intensity {round(x_val, 2)}", command=lambda: (download_predictions(x_val,predictions, path), status_label.config(text="Downloaded")))
                 download_prediction.grid(row=6, column=0, padx=5, pady=5, sticky="ew")
             except ValueError:
                 status_label.config(text="Please enter a number")
                 return
-
-        predict_entry = tk.Entry(prediction_tab, width=10)
+            
         predict_button = tk.Button(prediction_tab, text="Predict", command=predict_button_click)
-
-        predict_entry.grid(row=3, column=0, columnspan=3)
-        predict_button.grid(row=3, column=4, padx=5, pady=5,sticky="ew")
+        predict_image_entry = tk.Entry(prediction_tab, width=50)
+        predict_image_browse = tk.Button(prediction_tab, text="Browse", command=lambda:browse_path(predict_image_entry, [("JPG", "*.jpg"),("PNG", "*.png"),("JPEG", "*.jpeg")]))
+        
+        predict_image_entry.grid(row=3, column=0, columnspan=3)
+        predict_image_browse.grid(row=3, column=4, padx=5,pady=5, sticky="ew")
+        predict_button.grid(row=4, column=0, padx=5, pady=5,sticky="ew")
     else:
         status_label.config(text="Please enter a valid filepath")
 
@@ -141,37 +149,25 @@ def perform_image_analysis():
     folder_path = image_folder_path.get()
     if os.path.exists(folder_path):
         status_label.config(text="Starting....")
+        show_image_label = Label(image_analysis_tab)
+        intensity_label = Label(image_analysis_tab, text="")
+        progress_bar = Progressbar(image_analysis_tab, orient="horizontal", length=800, mode="determinate")
+        progress_status_bar = Label(image_analysis_tab, text="")
+        show_image_label.grid(row=4, column=0, padx=10, pady=15, sticky="ew")
+        intensity_label.grid(row=5, column=0, sticky="ew", padx=5, pady=5)
+        progress_bar.grid(row=6, column=0, padx=5, pady=5, columnspan=3,sticky="ew")
+        progress_status_bar.grid(row=6, column=4, padx=5,pady=5, sticky="e")
         try:
-            print("this.")
-            paths = []
-            for f in os.listdir(folder_path):
-                if os.path.isdir(os.path.join(folder_path, f)):
-                    print("Started check 1")
-                    f_path = os.path.join(folder_path, f)
-                    try:
-                        conc = float(f[:f.index(" ")].strip())
-                        print(f_path, conc)
-                        images_present = False
-                        for i in os.listdir(f_path):
-                            if i.endswith((".jpg", ".jpeg", ".png")):
-                                images_present=True   
-                        if images_present:
-                            paths.append(f_path)
-                            print("\t Appended")
-                    except Exception as e:
-                        print(f"{e}")
-                        continue
-            if len(paths) > 0:
-                print("Started.")
-                status_label.config(text="Processing....")
-                processFolder(folder_path)
-                status_label.config(text="Done. Check folder to find data.xlsx. Use the Analysis Tab to perform analysis")
-
+            start_time = time()
+            processFolder(folder_path, progress_bar, progress_status_bar,status_label, show_image_label, intensity_label)
+            status_label.config(text=f"Done within {round(time()-start_time, 2)} seconds. Check {os.path.basename(folder_path)} to find data.xlsx. Use the Analysis Tab to perform analysis")            
+            return
         except Exception as e:
             print(f"Error -> {e}")
             status_label.config(text=f"Error -> {e}")
     else:
         status_label.config(text="Please entere a valid folder path")
+        return
 
 app = tk.Tk()
 app.title("ECL Predictive Analysis Interface")
@@ -196,7 +192,7 @@ app_tab_book.add(prediction_tab, text=predict_tab_text)
 app_tab_book.bind("<<NotebookTabChanged>>", on_tab_selected)
 
 #Analysis Tab elements
-img = Image.open("mmne.jpg")
+img = Image.open("media/img/mmne.jpg")
 img = img.resize((200, (200*img.height//img.width) ))
 img = ImageTk.PhotoImage(img)
 logo_label = tk.Label(analysis_tab, image=img)
@@ -229,10 +225,10 @@ predict_path.grid(row=1, column=0, columnspan=4, padx=5, pady=5, sticky="ew")
 browse_predict_path.grid(row=1, column=5, padx=5, pady=5, sticky="ew")
 load_model_button.grid(row=2, column=0, padx=5, pady=5, sticky="ew")
 
-#Image Analysis Tab
+#Image Analysis Tab Elements
 image_folder_path = tk.Entry(image_analysis_tab, width=50)
 browse_folder_path = tk.Button(image_analysis_tab, text="Browse", command=lambda:browse_path(image_folder_path, file=False))
-analyse_image_button = tk.Button(image_analysis_tab, text="Perform Analysis", command=perform_image_analysis)
+analyse_image_button = tk.Button(image_analysis_tab, text="Perform Analysis", command=lambda: (analyse_image_button.config(state="disabled"), perform_image_analysis(), analyse_image_button.config(state="normal")), background="blue")
 logo_label = tk.Label(image_analysis_tab, image=img)
 image_analysis_label = tk.Label(image_analysis_tab, text="")
 
