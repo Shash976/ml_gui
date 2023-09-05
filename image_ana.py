@@ -1,8 +1,9 @@
-from cv2 import imread, cvtColor, inRange
+from cv2 import imread, cvtColor, inRange, VideoCapture
 from processing import makeExcel, os, np, pd
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
 from PIL.Image import fromarray
 from PIL.ImageTk import PhotoImage
+import os
 
 Y = "Concentration"
 X = "Intensity"
@@ -12,7 +13,7 @@ basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
 
 def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label):
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg"))]
+    total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))]
     for i, image in enumerate(total_images):
         try:
             for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
@@ -21,13 +22,17 @@ def processFolder(folder_path, progress_bar, progress_status_bar, status_label, 
                 except:
                     continue
             status_label.config(text="Processing....")
-            image_array = imread(image)
-            print(f"is Mean works till line 25")                       
+            if image.endswith(".gif"):
+                frames = [frame for ret, frame in iter(lambda: (VideoCapture("path/to/your.gif").read()), (False, None)) if ret]
+                image_array = np.max(np.array(frames), axis=0)
+            else:
+                image_array = imread(image)
+            debug(f"is Mean works till line 25")                       
             mean, crop_cords = getMean(image_array, conc, data_frame=DATA, X=X, Y=Y)
-            print(f"is Mean works till line 27")  
+            debug(f"is Mean works till line 27")  
             mean_label.config(text=f"Intensity: {round(mean,2)}")
             mean_label.update_idletasks()
-            print(f"{mean} is Mean works till line 29")   
+            debug(f"{mean} is Mean works till line 29")   
             im = fromarray(np.uint8(cvtColor(image_array[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10,4)))
             
             im = im.resize((200, (200*im.height//im.width)))
@@ -39,7 +44,7 @@ def processFolder(folder_path, progress_bar, progress_status_bar, status_label, 
             progress_status_bar.update_idletasks()
             progress_bar.update_idletasks()
             DATA.loc[len(DATA)] = [conc, mean]
-            print("----------------------------------")
+            debug("----------------------------------")
         except Exception as e:
             print(f"Error - > {e}")
             return
