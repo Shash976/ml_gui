@@ -52,7 +52,12 @@ def processFolder(folder_path, progress_bar, progress_status_bar, status_label, 
     return
 
 def getMean(image,concentration, data_frame=DATA, X = X, Y=Y):
-    image  = imread(image) if type(image) is str else image
+    if type(image) is str:
+        if image.endswith(".gif"):
+                frames = [frame for ret, frame in iter(lambda: (VideoCapture("path/to/your.gif").read()), (False, None)) if ret]
+                image = np.max(np.array(frames), axis=0)
+        else:
+            image = imread(image)
     mean = 0
     hsv_img = cvtColor(image, 40)
     debug("\t\t\t working... line 32")
