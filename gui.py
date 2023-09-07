@@ -1,7 +1,7 @@
-from image_ana import getMean, is_float, processFolder, calculateMean
+from image_ana import getMean, is_float, processFolder, calculateMean, getFrame
 from processing import ML_Model, process_main, x, y, makeExcel
 import tkinter as tk
-from cv2 import imread, cvtColor
+from cv2 import imread, cvtColor, VideoCapture
 from tkinter import filedialog
 from tkinter.ttk import *
 from PIL import Image, ImageTk
@@ -9,6 +9,7 @@ from prediction import load, predict_value, download_predictions
 import pandas as pd
 import os
 from time import time
+import numpy as np
 
 def browse_path(entry_path, file_types=[("Excel Files", "*.xlsx")], file=True):
     if file:
@@ -119,7 +120,11 @@ def load_model():
         loaded_models = load(path)
         def predict_button_click():
             try:
-                image = imread(predict_image_entry.get().strip())
+                image = predict_image_entry.get().strip()
+                if image.endswith(".gif"):
+                    image = getFrame(image)
+                else:
+                    image = imread(image)
                 hsv_img = cvtColor(image,40)
                 x_val,_,_ = calculateMean(imread(predict_image_entry.get().strip()), hsv_img, 210, 8500)
                 for i in [175,170, 160, 140, 80, 55, 40]:
@@ -137,7 +142,7 @@ def load_model():
             
         predict_button = tk.Button(prediction_tab, text="Predict", command=predict_button_click)
         predict_image_entry = tk.Entry(prediction_tab, width=50)
-        predict_image_browse = tk.Button(prediction_tab, text="Browse", command=lambda:browse_path(predict_image_entry, [("JPG", "*.jpg"),("PNG", "*.png"),("JPEG", "*.jpeg")]))
+        predict_image_browse = tk.Button(prediction_tab, text="Browse", command=lambda:browse_path(predict_image_entry, [("JPG", "*.jpg"),("PNG", "*.png"),("JPEG", "*.jpeg"), ("GIF", "*.gif")]))
         
         predict_image_entry.grid(row=3, column=0, columnspan=3)
         predict_image_browse.grid(row=3, column=4, padx=5,pady=5, sticky="ew")
@@ -171,7 +176,7 @@ def perform_image_analysis():
 
 app = tk.Tk()
 app.title("ECL Predictive Analysis Interface")
-app.iconbitmap("maxresdefault.ico")
+
 
 app_tab_book = Notebook(app)
 app_tab_book.grid(row=0, column=0, sticky='nsew')
@@ -192,7 +197,7 @@ app_tab_book.add(prediction_tab, text=predict_tab_text)
 app_tab_book.bind("<<NotebookTabChanged>>", on_tab_selected)
 
 #Analysis Tab elements
-img = Image.open("media/img/mmne.jpg")
+img = Image.open("mmne.jpg")#"media/img/mmne.jpg")
 img = img.resize((200, (200*img.height//img.width) ))
 img = ImageTk.PhotoImage(img)
 logo_label = tk.Label(analysis_tab, image=img)
@@ -204,6 +209,9 @@ for model in ML_Model.models:
 select_all_var = tk.BooleanVar()
 select_all_checkbox = tk.Checkbutton(analysis_tab, text="Select All", variable=select_all_var, command=select_all_models)
 start_processing_button = tk.Button(analysis_tab, text="Process File", command=process_file, state=tk.NORMAL)
+
+#app.iconbitmap("media/img/maxresdefault.ico")
+app.iconbitmap("maxresdefault.ico")
 
 analysis_file_path.grid(row=2, column=0, columnspan=3, padx=10, pady=5, sticky="ew")
 analysis_browse_button.grid(row=2, column=3, padx=5, pady=5, sticky="e")

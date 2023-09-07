@@ -5,9 +5,9 @@ import numpy as np
 
 def load(path):
     loaded_models = {}
-    def load_model(path):
-        loaded_model = joblib.load(path)
-        loaded_model_path = os.path.splitext(os.path.split(path)[1])[0]
+    def load_model(model_path):
+        loaded_model = joblib.load(model_path)
+        loaded_model_path = os.path.splitext(os.path.split(model_path)[1])[0]
         loaded_models[loaded_model_path] = loaded_model
     if path.endswith(".pkl"):
         load_model(path)

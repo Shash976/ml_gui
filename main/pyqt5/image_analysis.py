@@ -1,15 +1,15 @@
 from cv2 import imread, cvtColor, inRange, VideoCapture
 from processing import makeExcel, os, np, pd
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
+from PyQt5.QtGui import QImage, QPixmap
 from PIL.Image import fromarray
-from PIL.ImageTk import PhotoImage
 import os
 
 Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
-VAL_RANGES = [210, 175,170, 160,140,80,55, 40]
-basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
+LUMINOL_RANGES = [210, 175,170, 160,140,80,55, 40]
+basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=CRITICAL)
 
 def getFrame(gif_path):
     gif = VideoCapture(gif_path)
@@ -28,42 +28,56 @@ def processFolder(folder_path, progress_bar, progress_status_bar, status_label, 
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
     total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))]
     for i, image in enumerate(total_images):
-        try:
-            for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
-                try:
-                    conc=float(part)
-                except:
-                    continue
-            status_label.config(text="Processing....")
-            if image.endswith(".gif"):
-                image_array = getFrame(image)
-            else:
-                image_array = imread(image)
-            debug(f"is Mean works till line 25")                       
-            mean, crop_cords = getMean(image_array, conc, data_frame=DATA, X=X, Y=Y)
-            debug(f"is Mean works till line 27")  
-            mean_label.config(text=f"Intensity: {round(mean,2)}")
-            mean_label.update_idletasks()
-            debug(f"{mean} is Mean works till line 29")   
-            im = fromarray(np.uint8(cvtColor(image_array[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10,4)))
-            
-            im = im.resize((200, (200*im.height//im.width)))
-            im = PhotoImage(im)
-            image_placeholder.config(image=im)
-            image_placeholder.update_idletasks()
-            progress_bar["value"] = i*100//(len(total_images)-1)
-            progress_status_bar.config(text=f"{i+1} out of {len(total_images)} done")
-            progress_status_bar.update_idletasks()
-            progress_bar.update_idletasks()
-            DATA.loc[len(DATA)] = [conc, mean]
-            debug("----------------------------------")
-        except Exception as e:
-            print(f"Error - > {e}")
+        data = processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, "Luminol", DATA)
+        if data:
+            continue
+        else:
             return
-    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby=Y)
-    return
+    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=Y)
 
-def getMean(image,concentration, data_frame=DATA, X = X, Y=Y):
+def processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent="Luminol",data=DATA):
+    try:
+        conc=None
+        for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
+            try:
+                conc=float(part)
+            except:
+                continue
+        if conc==None:
+            return None
+        status_label.setText("Processing....")
+        status_label.setVisible(True)
+        if image.endswith(".gif"):
+            image_array = getFrame(image)
+        else:
+            image_array = imread(image)
+        debug(f"is Mean works till line 25")                       
+        mean, crop_cords = getMean(image_array, conc, data_frame=data, X=X, Y=Y, reagent="Luminol")
+        debug(f"is Mean works till line 27")  
+        mean_label.setVisible(True)
+        mean_label.setText(f"Intensity: {round(mean,2)}")
+        debug(f"{mean} is Mean works till line 29")   
+        im = image_array[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
+        im = fromarray(np.uint8(cvtColor(im,4)))
+        im.resize((200, (200*im.height//im.width)))
+        im = np.array(im)
+        im = cvtColor(im,4)
+        image_placeholder.setPixmap(QPixmap(numpy_to_qt_image(im)))
+        image_placeholder.setVisible(True)
+        progress_bar.setValue(i*100//(len(total_images)-1))
+        progress_status_bar.setText(f"{i+1} out of {len(total_images)} done")
+        progress_status_bar.setVisible(True)
+        progress_bar.setVisible(True)
+        data.loc[len(data)] = [conc, mean]
+        debug("----------------------------------")
+        return data
+    except Exception as e:
+        error(f"Error - > {e}")
+        status_label.setText(f"Error -> {e}")
+        return None
+
+
+def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol"):
     if type(image) is str:
         if image.endswith(".gif"):
                 image = getFrame(image)
@@ -72,7 +86,9 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y):
     mean = 0
     hsv_img = cvtColor(image, 40)
     debug("\t\t\t working... line 32")
-    for lightness in VAL_RANGES:
+    if reagent == "Luminol":
+        lightness_ranges = LUMINOL_RANGES
+    for lightness in lightness_ranges:
         mean, p_length, crop_cords = calculateMean(image, hsv_img, lightness)
         debug("\t\t\t working... line 35")
         if p_length < 10000:
@@ -86,11 +102,11 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y):
             t_lightness = lightness
             while abs(t_mean-prev_mean) > req_range:
                 if t_mean > prev_mean:
-                    t_lightness = VAL_RANGES[VAL_RANGES.index(t_lightness)+1]
+                    t_lightness = lightness_ranges[lightness_ranges.index(t_lightness)+1]
 
                     debug("\t\t\t working... line 47")
                 else:
-                    t_lightness = VAL_RANGES[VAL_RANGES.index(t_lightness)-1]
+                    t_lightness = lightness_ranges[lightness_ranges.index(t_lightness)-1]
                     debug("\t\t\t working... line 50")
                 t_mean, _, crop_cords = calculateMean(image, hsv_img, t_lightness)
                 info(f"\t\t\t working... line 53 t_mean is {t_mean} at lightness {t_lightness}")
@@ -130,3 +146,10 @@ def is_float(x):
         return True
     except Exception as e:
         return False
+    
+def numpy_to_qt_image(image, swapped=True):
+    height, width, channel = image.shape
+    bytesPerLine = 3 * width
+    if not swapped:
+        return QImage(image.data, width, height, bytesPerLine, QImage.Format_RGB888)
+    return QImage(image.data, width, height, bytesPerLine, QImage.Format_RGB888).rgbSwapped()
