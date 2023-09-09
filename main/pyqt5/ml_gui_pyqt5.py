@@ -7,6 +7,7 @@ from time import time
 from processing import process_main
 from model_def import ML_Model, x,y
 from PIL import Image
+import sys
 
 current_index = 0
 total_images = []
@@ -67,6 +68,15 @@ def on_timeout():
 
 timer.timeout.connect(on_timeout)
 
+def resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+
+    return os.path.join(base_path, relative_path)
 
 class MainWindow(QMainWindow):
     def __init__(self):
@@ -80,7 +90,7 @@ class MainWindow(QMainWindow):
         
         # Header
         self.header_bits_image = QLabel()
-        i1 = Image.open("mmne.jpg")
+        i1 = Image.open(resource_path("bits_logo.jpg"))
         i1 = i1.resize((50, (50*i1.height//i1.width)))
         from numpy import array
         i1 = array(i1)
@@ -91,9 +101,9 @@ class MainWindow(QMainWindow):
         self.header_label.setFont(self.header_font)
         self.header_label.setAlignment(Qt.AlignCenter)
         self.header_lab_image = QLabel()
-        i2 = Image.open("bits_logo.jpg")
+        i2 = Image.open(resource_path("mmne.jpg"))
         i2 = i2.resize((50, (50*i2.height//i2.width)))
-        self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(array(i2))))
+        self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
         self.header_lab_image.setAlignment(Qt.AlignRight)
         self.header_layout = QHBoxLayout()
         self.header_layout.addWidget(self.header_bits_image)
@@ -497,10 +507,3 @@ class MainWindow(QMainWindow):
         else:
             self.footer_label.setText("Please enter a valid Image Path.")     
 
-            
-# Running the application
-if __name__ == "__main__":
-    app = QApplication([])
-    window = MainWindow()
-    window.show()
-    app.exec_()
