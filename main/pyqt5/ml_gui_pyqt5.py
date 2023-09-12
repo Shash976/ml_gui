@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QApplication,QMainWindow, QAbstractItemView, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QProgressBar, QCheckBox, QListWidget, QComboBox, QFileDialog
+from PyQt5.QtWidgets import QApplication,QSizePolicy,QMainWindow, QAbstractItemView, QTabWidget, QWidget, QVBoxLayout, QHBoxLayout, QLineEdit, QPushButton, QLabel, QProgressBar, QCheckBox, QListWidget, QComboBox, QFileDialog
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont, QIcon, QPixmap
 from pandas import DataFrame, read_excel
@@ -24,17 +24,21 @@ Y = y
 def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status_bar_element, status_label_element, image_placeholder_element, mean_label_element, reagent_args="Luminol"):
     global total_images, current_index, DATA, Y, X, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, start_time, folder_path, reagent
     # Initialize your state here, similar to what you do at the beginning of processFolder
-    folder_path = folder_path_args
     reagent = reagent_args
-    subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    from image_analysis import is_float
-    total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))] 
-    current_index = 0
-    y_title = "Concentration"
-    x_title = "Intensity"
-    DATA = DataFrame(columns=[y_title, x_title])  # Initialize or reset your DataFrame
-    start_time = time()
-    progress_bar, progress_status_bar, status_label, image_placeholder, mean_label = progress_bar_elemnt, progress_status_bar_element, status_label_element, image_placeholder_element, mean_label_element
+    if os.path.exists(folder_path_args):
+        folder_path = folder_path_args
+        subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
+        from image_analysis import is_float
+        total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))] 
+        current_index = 0
+        y_title = "Concentration"
+        x_title = "Intensity"
+        DATA = DataFrame(columns=[y_title, x_title])  # Initialize or reset your DataFrame
+        start_time = time()
+        progress_bar, progress_status_bar, status_label, image_placeholder, mean_label = progress_bar_elemnt, progress_status_bar_element, status_label_element, image_placeholder_element, mean_label_element
+    else:
+        status_label_element.setText("Enter a Valid Folderpath")
+        return
 
 def partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent="Luminol",n=1):  # You can adjust n based on how many images you want to process at a time
     global current_index, total_images, DATA
@@ -87,15 +91,17 @@ class MainWindow(QMainWindow):
         
         self.central_widget = QWidget(self)
         self.main_layout = QVBoxLayout()
+
+        #Fonts
+        self.main_font = QFont("Calibri", pointSize=12, weight=30, italic=False)
         
         # Header
         self.header_bits_image = QLabel()
         i1 = Image.open(resource_path("bits_logo.jpg"))
         i1 = i1.resize((50, (50*i1.height//i1.width)))
         from numpy import array
-        i1 = array(i1)
         from image_analysis import numpy_to_qt_image
-        self.header_bits_image.setPixmap(QPixmap(numpy_to_qt_image(i1, False)))
+        self.header_bits_image.setPixmap(QPixmap(numpy_to_qt_image(array(i1), swapped=False)))
         self.header_label = QLabel("ECL Predictive Analysis Interface", self)
         self.header_font = QFont("Calibri", pointSize=26, weight=100, italic=False)
         self.header_label.setFont(self.header_font)
@@ -132,19 +138,25 @@ class MainWindow(QMainWindow):
         self.hbox1.addWidget(self.image_folder_input)
         self.hbox1.addWidget(self.browse_folder_btn)
         
+        self.luminol_formula_img_label = QLabel()
+        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("eclmechanism.png")))
+        self.luminol_formula_img_label.setAlignment(Qt.AlignCenter)
+
         self.reagent_text_label = QLabel("Reagent: ")
-        self.reagent_dropdown = QComboBox()
-        self.reagent_dropdown.addItem("Luminol")        
+        self.reagent_dropdown = QLabel("Luminol")        
         self.choose_reagent_hbox = QHBoxLayout()
         self.choose_reagent_hbox.addWidget(self.reagent_text_label)
         self.choose_reagent_hbox.addWidget(self.reagent_dropdown)
+        self.choose_reagent_hbox.setAlignment(Qt.AlignLeft)
 
         self.image_analysis_vbox1 = QVBoxLayout()
         self.image_analysis_vbox1.addLayout(self.hbox1)
+        self.image_analysis_vbox1.addWidget(self.luminol_formula_img_label)
         self.image_analysis_vbox1.addLayout(self.choose_reagent_hbox)
         self.image_layout.addLayout(self.image_analysis_vbox1)
 
         self.perform_analysis_button  = QPushButton("Perform Analysis")
+        self.perform_analysis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.image_layout.addWidget(self.perform_analysis_button)
 
         # ii. Empty label for image
@@ -254,7 +266,7 @@ class MainWindow(QMainWindow):
         # ix. Train new data button
         self.reset_tab_btn = QPushButton("Train new data")
         self.reset_tab_btn.setVisible(False)
-        self.reset_tab_btn.clicked.connect(self.reset_tab)
+        self.reset_tab_btn.clicked.connect(lambda:self.reset_tab(self.data_layout))
         self.data_layout.addWidget(self.reset_tab_btn)
 
         self.data_analysis_tab.setLayout(self.data_layout)
@@ -269,41 +281,60 @@ class MainWindow(QMainWindow):
         self.prediction_hbox1 = QHBoxLayout()
         self.prediction_hbox1.addWidget(self.prediction_file_input)
         self.prediction_hbox1.addWidget(self.prediction_browse_file_btn)
+        self.prediction_layout.addLayout(self.prediction_hbox1)
+
+        self.luminol_experiment_img_label = QLabel()
+        self.luminol_experiment_img_label.setPixmap(QPixmap(resource_path("luminol_experiment.png")))
+        self.prediction_layout.addWidget(self.luminol_experiment_img_label)
+
+        self.prediction_reagent_label = QLabel("Reagent: ")
+        self.prediction_reagent_name = QLabel("Luminol")
+        self.prediction_hbox3 = QHBoxLayout()
+        self.prediction_hbox3.addWidget(self.prediction_reagent_label)
+        self.prediction_hbox3.addWidget(self.prediction_reagent_name)
+        self.prediction_hbox3.setAlignment(Qt.AlignLeft)
+        self.prediction_layout.addLayout(self.prediction_hbox3)
 
         self.prediction_load_file_btn = QPushButton("Load model(s) from file")
         self.prediction_load_file_btn.clicked.connect(self.load_models)
-        self.prediction_vbox1 = QVBoxLayout()
-        self.prediction_vbox1.addLayout(self.prediction_hbox1)
-        self.prediction_vbox1.addWidget(self.prediction_load_file_btn)
-        self.prediction_layout.addLayout(self.prediction_vbox1)
+        self.prediction_layout.addWidget(self.prediction_load_file_btn)
         
-        #LOADING THE IMAGE AND SETTING REAGENTS
+        #SELECTING WHETHER TO USE IMAGE OR MANUAL VALUE
+        self.select_input_method_label = QLabel("Select input method")
+        self.select_input_method = QComboBox()
+        self.select_input_method.addItems(["Path to an image or GIF", "Manual"])
+        self.set_input_method_btn = QPushButton("Set Input Method")
+        self.set_input_method_btn.clicked.connect(self.set_prediction_input_method)
+        self.prediction_hbox4 = QHBoxLayout()
+        self.prediction_hbox4.addWidget(self.select_input_method_label)
+        self.prediction_hbox4.addWidget(self.select_input_method)
+        self.prediction_hbox4.addWidget(self.set_input_method_btn)
+        self.prediction_layout.addLayout(self.prediction_hbox4)
+
+        #ENTER MANUALLY
+        self.prediction_enter_manually_label = QLabel("Enter X-Value")
+        self.prediction_x_val_entry = QLineEdit()
+        self.prediction_hbox5 = QHBoxLayout()
+        self.prediction_hbox5.addWidget(self.prediction_enter_manually_label)
+        self.prediction_hbox5.addWidget(self.prediction_x_val_entry)
+        self.prediction_layout.addLayout(self.prediction_hbox5)
+
+        #LOADING THE IMAGE
         self.prediction_image_input = QLineEdit()
         self.prediction_image_input.setVisible(False)
         self.prediction_image_browse_btn = QPushButton("Browse")
         self.prediction_image_browse_btn.clicked.connect(lambda:(self.browse(self.prediction_image_input, file_types=[("Images", "*.jpg"),("Images", "*.png"),("Images", "*.jpeg"),("GIF", "*.gif")])))
         self.prediction_image_browse_btn.setVisible(False)
-        self.prediciton_hbox2 = QHBoxLayout()
-        self.prediciton_hbox2.addWidget(self.prediction_image_input)
-        self.prediciton_hbox2.addWidget(self.prediction_image_browse_btn)
+        self.prediction_hbox2 = QHBoxLayout()
+        self.prediction_hbox2.addWidget(self.prediction_image_input)
+        self.prediction_hbox2.addWidget(self.prediction_image_browse_btn)
+        self.prediction_layout.addLayout(self.prediction_hbox2)
 
-        self.prediction_reagent_label = QLabel("Reagent: ")
-        self.prediction_reagent_label.setVisible(False)
-        self.prediction_reagent_dropdown = QComboBox()
-        self.prediction_reagent_dropdown.setVisible(False)
-        self.prediction_reagent_dropdown.addItem("Luminol")
-        self.prediction_hbox3 = QHBoxLayout()
-        self.prediction_hbox3.addWidget(self.prediction_reagent_label)
-        self.prediction_hbox3.addWidget(self.prediction_reagent_dropdown)
-
-        self.prediction_load_image_and_predict_btn = QPushButton("Predict")
-        self.prediction_load_image_and_predict_btn.setVisible(False)
-        self.prediction_load_image_and_predict_btn.clicked.connect(self.load_image_and_predict)
-        self.prediction_vbox2 = QVBoxLayout()
-        self.prediction_vbox2.addLayout(self.prediciton_hbox2)
-        self.prediction_vbox2.addLayout(self.prediction_hbox3)
-        self.prediction_vbox2.addWidget(self.prediction_load_image_and_predict_btn)
-        self.prediction_layout.addLayout(self.prediction_vbox2)
+        #PREDICT
+        self.prediction_load_and_predict_btn = QPushButton("Predict")
+        self.prediction_load_and_predict_btn.setVisible(False)
+        self.prediction_load_and_predict_btn.clicked.connect(self.load_and_predict)
+        self.prediction_layout.addWidget(self.prediction_load_and_predict_btn)
         
         # RESETTING and DOWNLOAD
         self.results_label = QLabel("")
@@ -327,13 +358,29 @@ class MainWindow(QMainWindow):
         self.footer_label = QLabel(" ", self)
         self.footer_label.setAlignment(Qt.AlignCenter)
         self.main_layout.addWidget(self.footer_label)
-        self.perform_analysis_button.clicked.connect(lambda:[initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText()), timer.start(1)])
-
-
+        self.perform_analysis_button.clicked.connect(self.check_path_image_input)
         # Set layout and central widget
         self.central_widget.setLayout(self.main_layout)
         self.setCentralWidget(self.central_widget)
-    
+        self.hide_elements(self.prediction_hbox5, footer=False)
+        self.hide_elements(self.prediction_hbox2, footer=False)
+        self.hide_elements(self.prediction_hbox4)
+        self.startup()
+
+    def startup(self):
+        elements = self.getElements(self.prediction_layout)
+        elements += self.getElements(self.data_layout)
+        elements += self.getElements(self.image_layout)
+        for element in elements:
+            if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)]:
+                element.setFont(self.main_font)
+                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.luminol_experiment_img_label]:
+                    element.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+                    if type(element)==type(self.footer_label):
+                        element.setAlignment(Qt.AlignLeft)
+                elif element in [self.luminol_formula_img_label, self.luminol_experiment_img_label]:
+                    element.setAlignment(Qt.AlignCenter)
+
     def browse(self, input_element, is_file=True, file_types=[("Excel Files", "*.xlsx")]):
         if is_file == True:
             path, _ = QFileDialog.getOpenFileName(self, filter=";;".join([f"{desc} ({ext})" for desc, ext in file_types]))
@@ -341,6 +388,13 @@ class MainWindow(QMainWindow):
             path = QFileDialog.getExistingDirectory(self, "Select Folder")
         input_element.setText(path)
     
+    def check_path_image_input(self):
+        if os.path.exists(self.image_folder_input.text()):
+            initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.text())
+            timer.start(1)
+        else:
+            self.footer_label.setText("Please enter  a valid folderpath")
+
     def load_listbox_bloc(self):
         if os.path.exists(self.data_analysis_file_input_bar.text().strip()) and self.data_analysis_file_input_bar.text().endswith((".xlsx",".xls")):
             self.data_analysis_file_input_bar.setDisabled(True)
@@ -424,8 +478,9 @@ class MainWindow(QMainWindow):
         else:
             self.footer_label.setText("Please choose a number between 1 and 100 for test percentage")
 
-    def hide_elements(self, layout, exempt_list=[]):
+    def hide_elements(self, layout, exempt_list=[], footer=True):
         exempt_list=[self.load_data_button, self.browse_file_data_analysis, self.data_analysis_file_input_bar] if len(exempt_list) == 0 else exempt_list
+        print("w1")
         for i in range(layout.count()):
             item = layout.itemAt(i)
             widget = item.widget()
@@ -435,7 +490,8 @@ class MainWindow(QMainWindow):
                 widget.setDisabled(False)
             elif widget == None:
                 self.hide_elements(item, exempt_list)
-        self.footer_label.setText("")
+        if footer:
+            self.footer_label.setText("")
     
     def load_elements(self, layout, exempt_list=[]):
         exempt_list = [] if len(exempt_list) == 0 else exempt_list
@@ -462,11 +518,12 @@ class MainWindow(QMainWindow):
         return elements
 
     def reset_tab(self, layout=None):
-        layout = self.data_layout if self.layout is None else layout
+        layout = self.data_layout if layout == None else layout
         if layout == self.data_layout:
             global X, Y
             X=x
             Y=y
+            print("w")
             self.hide_elements(self.data_layout)
         elif layout == self.prediction_layout:
             self.hide_elements(self.prediction_layout, exempt_list=self.getElements(self.prediction_vbox1))
@@ -474,29 +531,52 @@ class MainWindow(QMainWindow):
     def load_models(self):
         if os.path.exists(self.prediction_file_input.text().strip()) and self.prediction_file_input.text().strip().endswith(".xlsx"):
             self.prediction_file_input.setDisabled(True)
-            self.load_elements(self.prediction_vbox2)
+            self.load_elements(self.prediction_hbox4)
+        else:
+            self.footer_label.setText("Please enter a valid filepath")
+
+    def set_prediction_input_method(self):
+        self.select_input_method.setDisabled(True)
+        if "image" in self.select_input_method.currentText().strip().lower():
+            self.load_elements(self.prediction_hbox2)
+        else:
+            self.load_elements(self.prediction_hbox5)
+        self.prediction_load_and_predict_btn.setVisible(True)
             
-    def load_image_and_predict(self):
-        if os.path.exists(self.prediction_image_input.text()) and self.prediction_image_input.text().endswith((".gif",".jpg", ".jpeg", ".png")):
-            self.prediction_image_input.setDisabled(True)
-            image_path = self.prediction_image_input.text()
-            reagent = self.prediction_reagent_dropdown.currentText()
-            self.prediction_reagent_dropdown.setDisabled(True)
-            if image_path.endswith(".gif"):
-                from image_analysis import getFrame
-                image = getFrame(image_path)
+    def load_and_predict(self):
+        x_val = None
+        if "image" in self.select_input_method.currentText().lower():
+            if os.path.exists(self.prediction_image_input.text()) and self.prediction_image_input.text().endswith((".gif",".jpg", ".jpeg", ".png")):
+                self.prediction_image_input.setDisabled(True)
+                image_path = self.prediction_image_input.text()
+                reagent = self.prediction_reagent_name.text()
+                self.prediction_reagent_name.setDisabled(True)
+                if image_path.endswith(".gif"):
+                    from image_analysis import getFrame
+                    image = getFrame(image_path)
+                else:
+                    from image_analysis import imread
+                    image = imread(image_path)
+                from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
+                hsv_image = cvtColor(image,40)
+                reagent_ranges = {"Luminol": LUMINOL_RANGES}
+                x_val,_,_ = calculateMean(image, hsv_image, reagent_ranges[reagent][0], 8500)
+                for i in reagent_ranges[reagent][1:]:
+                        if x_val == 0:
+                            x_val,_,_ = calculateMean(image, hsv_image, i, 8500)
+                        else:
+                            break
             else:
-                from image_analysis import imread
-                image = imread(image_path)
-            from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
-            hsv_image = cvtColor(image,40)
-            reagent_ranges = {"Luminol": LUMINOL_RANGES}
-            x_val,_,_ = calculateMean(image, hsv_image, reagent_ranges[reagent][0], 8500)
-            for i in reagent_ranges[reagent][1:]:
-                    if x_val == 0:
-                        x_val,_,_ = calculateMean(image, hsv_image, i, 8500)
-                    else:
-                        break
+                self.footer_label.setText("Please enter a valid Image Path.")
+                return
+        else:
+            from image_analysis import is_float
+            if is_float(self.prediction_x_val_entry.text()):
+                x_val = float(self.prediction_x_val_entry.text())
+            else:
+                self.footer_label.setText("Please enter a valid number")
+                return
+        if x_val != None:
             from prediction import predict_value, load, download_predictions
             loaded_models = load(self.prediction_file_input.text().strip())
             predictions, label_text = predict_value(x_val, loaded_models)
@@ -504,6 +584,3 @@ class MainWindow(QMainWindow):
             self.download_results_tn.clicked.connect(lambda:(download_predictions(x_val, predictions, parentPath=self.prediction_file_input.text().strip()), self.footer_label.setText("Downloaded")))
             self.load_elements(self.prediction_vbox3)
             self.footer_label.setText("Done")
-        else:
-            self.footer_label.setText("Please enter a valid Image Path.")     
-

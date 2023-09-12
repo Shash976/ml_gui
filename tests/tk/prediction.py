@@ -23,7 +23,7 @@ def predict_value(x_val, loaded_models):
     label_text = ""
     for loaded_model_name, predict_model in loaded_models.items():
         predictions[predict_model]  = round(predict_model.model.predict(np.array([x_val]).reshape(-1,1))[0], 3)
-        label_text += f"{predict_model.name} ({predict_model.category}) -> {round(predictions[predict_model]),2}\n"
+        label_text += f"{predict_model.name} ({predict_model.category}) -> {predictions[predict_model]}\n"
         
     return predictions, label_text
 

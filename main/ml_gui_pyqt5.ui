@@ -14,7 +14,7 @@
    <string>ECL Intensity Interface</string>
   </property>
   <property name="currentIndex">
-   <number>0</number>
+   <number>2</number>
   </property>
   <widget class="QWidget" name="image_ana_tab">
    <attribute name="title">
@@ -129,6 +129,39 @@
    <attribute name="title">
     <string>Prediction</string>
    </attribute>
+   <widget class="QWidget" name="horizontalLayoutWidget_4">
+    <property name="geometry">
+     <rect>
+      <x>30</x>
+      <y>20</y>
+      <width>511</width>
+      <height>41</height>
+     </rect>
+    </property>
+    <layout class="QHBoxLayout" name="horizontalLayout_4">
+     <item>
+      <widget class="QLabel" name="label_4">
+       <property name="text">
+        <string>TextLabel</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="comboBox">
+       <item>
+        <property name="text">
+         <string>Enter Image/GIF</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Enter X-Val</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+    </layout>
+   </widget>
   </widget>
  </widget>
  <resources/>
