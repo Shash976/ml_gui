@@ -526,7 +526,7 @@ class MainWindow(QMainWindow):
             print("w")
             self.hide_elements(self.data_layout)
         elif layout == self.prediction_layout:
-            self.hide_elements(self.prediction_layout, exempt_list=self.getElements(self.prediction_vbox1))
+            self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_experiment_img_label,self.prediction_load_file_btn,self.prediction_reagent_label]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
 
     def load_models(self):
         if os.path.exists(self.prediction_file_input.text().strip()) and self.prediction_file_input.text().strip().endswith(".xlsx"):
