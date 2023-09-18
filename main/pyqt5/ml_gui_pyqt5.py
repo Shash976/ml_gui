@@ -4,6 +4,7 @@ from PyQt5.QtGui import QFont, QIcon, QPixmap
 from pandas import DataFrame, read_excel
 import os
 from time import time
+from processing import makeExcel
 from processing import process_main
 from model_def import ML_Model, x,y
 from PIL import Image
@@ -58,10 +59,10 @@ def check_completion():
     global current_index, total_images, start_time
     if current_index >= len(total_images):
         # Call makeExcel and stop the timer
-        from image_analysis import makeExcel
-        makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")  # Assuming makeExcel is your function to create Excel
+        #from image_analysis import makeExcel
+        #makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")  # Assuming makeExcel is your function to create Excel
         timer.stop()
-        status_label.setText(f"Done within {round(time()-start_time, 2)} seconds.")
+        status_label.setText(f"Done within {round(time()-start_time, 2)} seconds. Data is ready to be saved.")
 
 def on_timeout():
     global progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent
@@ -147,26 +148,40 @@ class MainWindow(QMainWindow):
         self.choose_reagent_hbox.addWidget(self.reagent_text_label)
         self.choose_reagent_hbox.addWidget(self.reagent_dropdown)
         self.choose_reagent_hbox.setAlignment(Qt.AlignLeft)
-
+        
         self.image_analysis_vbox1 = QVBoxLayout()
         self.image_analysis_vbox1.addLayout(self.hbox1)
-        self.image_analysis_vbox1.addWidget(self.luminol_formula_img_label)
         self.image_analysis_vbox1.addLayout(self.choose_reagent_hbox)
         self.image_layout.addLayout(self.image_analysis_vbox1)
 
-        self.perform_analysis_button  = QPushButton("Perform Analysis")
-        self.perform_analysis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-        self.image_layout.addWidget(self.perform_analysis_button)
+        self.luminol_formula_img_label = QLabel()
+        self.ecl_mechanism_image = Image.open(resource_path("eclmechanism.png"))
+        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("eclmechanism.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.4)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
+        self.luminol_formula_img_label.setAlignment(Qt.AlignRight)
+        self.image_luminol_experiment_img_label = QLabel()
+        self.image_luminol_experiment_img_label.setPixmap(QPixmap(resource_path("luminol_experiment.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.45)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
+        self.image_luminol_experiment_img_label.setAlignment(Qt.AlignRight)
 
-        # ii. Empty label for image
+        self.image_analysis_formulas_vbox = QVBoxLayout()
+        self.image_analysis_formulas_vbox.addWidget(self.luminol_formula_img_label)
+        self.image_analysis_formulas_vbox.addWidget(self.image_luminol_experiment_img_label)
+        # Empty label for image
         self.image_label = QLabel()
         self.image_label.setVisible(False)
-        self.image_layout.addWidget(self.image_label)
-        
+
         # iii. Another empty label for dynamic text
         self.dynamic_label = QLabel()
         self.dynamic_label.setVisible(False)
-        self.image_layout.addWidget(self.dynamic_label)
+
+        self.image_placeholders_vbox = QVBoxLayout()
+        self.image_placeholders_vbox.addWidget(self.image_label)
+        self.image_placeholders_vbox.addWidget(self.image_label)
+        self.image_placeholders_vbox.addWidget(self.dynamic_label)
+
+        self.image_analysis_hbox2 = QHBoxLayout()
+        self.image_analysis_hbox2.addLayout(self.image_placeholders_vbox)
+        self.image_analysis_hbox2.addLayout(self.image_analysis_formulas_vbox)
+        self.image_layout.addLayout(self.image_analysis_hbox2)
         
         # iv. Progress bar and percentage label
         self.progress_bar = QProgressBar()
@@ -177,6 +192,17 @@ class MainWindow(QMainWindow):
         self.hbox2.addWidget(self.progress_bar)
         self.hbox2.addWidget(self.progress_label)
         self.image_layout.addLayout(self.hbox2)
+
+        self.perform_analysis_button  = QPushButton("Start Analysis")
+        self.perform_analysis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.image_save_data_btn = QPushButton("Save Data in Excel file.")
+        self.image_save_data_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.image_save_data_btn.clicked.connect(self.save_image_intensity_data)
+        self.image_analysis_hbox1 = QHBoxLayout()
+        self.image_analysis_hbox1.addWidget(self.perform_analysis_button)
+        self.image_analysis_hbox1.addWidget(self.image_save_data_btn)
+        self.image_analysis_hbox1.setAlignment(Qt.AlignCenter)
+        self.image_layout.addLayout(self.image_analysis_hbox1)
         
         self.image_analysis_tab.setLayout(self.image_layout)
 
@@ -373,11 +399,11 @@ class MainWindow(QMainWindow):
         for element in elements:
             if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)]:
                 element.setFont(self.main_font)
-                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.luminol_experiment_img_label]:
+                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.image_luminol_experiment_img_label,self.luminol_experiment_img_label,self.dynamic_label, self.image_label]:
                     element.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
-                    if type(element)==type(self.footer_label):
+                    if type(element)==type(self.footer_label) and element not in [self.dynamic_label, self.image_label]:
                         element.setAlignment(Qt.AlignLeft)
-                elif element in [self.luminol_formula_img_label, self.luminol_experiment_img_label]:
+                elif element in [self.luminol_experiment_img_label, self.image_label, self.dynamic_label]:
                     element.setAlignment(Qt.AlignCenter)
 
     def browse(self, input_element, is_file=True, file_types=[("Excel Files", "*.xlsx")]):
@@ -395,13 +421,22 @@ class MainWindow(QMainWindow):
         self.image_folder_input.setText(path)
 
     def save_image_intensity_data(self):
-        global DATA
+        global DATA, folder_path
         if len(DATA) > 0:
-            x = save_data()
-            if x is None:
+            if type(DATA) != type(None):
+                if type(DATA) == str:
+                    f = open(f"{os.path.splitext(folder_path)[0]}_calucatedIntensity.txt", "w+")
+                    f.write(DATA)
+                    f.close()
+                    self.footer_label.setText(f"Downloaded. Please check {os.path.splitext(folder_path)[0]}_calucatedIntensity.txt")
+                else:
+                    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")
+                    self.footer_label.setText(f"Downloaded. Please check {os.path.join(folder_path, 'data.xlsx')}")
+            else:
                 self.footer_label.setText("Please calculate Image Intensities before saving data")
 
     def check_path_image_input(self):
+        global DATA, folder_path
         if os.path.exists(self.image_folder_input.text()):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
                 initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.text())
@@ -436,7 +471,9 @@ class MainWindow(QMainWindow):
                 self.image_label.setVisible(True)
                 self.dynamic_label.setVisible(True)
                 self.dynamic_label.setText(f"Intensity: {x_val}")
-                self.footer_label.setText("Done. Please save to download in an .xlsx file.")
+                folder_path = image_path
+                DATA = f"{image_path} -> Intensity:  {x_val} "
+                self.footer_label.setText("Done. Please save to download.")
             else:
                 self.footer_label.setText("Please enter a valid image/gif path")
         else:
@@ -527,7 +564,6 @@ class MainWindow(QMainWindow):
 
     def hide_elements(self, layout, exempt_list=[], footer=True):
         exempt_list=[self.load_data_button, self.browse_file_data_analysis, self.data_analysis_file_input_bar] if len(exempt_list) == 0 else exempt_list
-        print("w1")
         for i in range(layout.count()):
             item = layout.itemAt(i)
             widget = item.widget()
@@ -570,7 +606,6 @@ class MainWindow(QMainWindow):
             global X, Y
             X=x
             Y=y
-            print("w")
             self.hide_elements(self.data_layout)
         elif layout == self.prediction_layout:
             self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_experiment_img_label,self.prediction_load_file_btn,self.prediction_reagent_label]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
