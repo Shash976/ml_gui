@@ -148,6 +148,8 @@ def is_float(x):
         return False
     
 def numpy_to_qt_image(image, swapped=True):
+    if len(image.shape) < 3:
+        image = np.stack((image,)*3, axis=-1)
     height, width, channel = image.shape
     bytesPerLine = 3 * width
     if not swapped:
