@@ -133,14 +133,13 @@ class MainWindow(QMainWindow):
         # i. Text input and Browse button
         self.image_folder_input = QLineEdit()
         self.browse_folder_btn = QPushButton("Browse")
-        self.browse_folder_btn.clicked.connect(lambda:(self.browse(self.image_folder_input, False)))
+        self.browse_folder_btn.clicked.connect(lambda:(self.tab_one_browse_folder_or_image()))
+        self.multiple_or_single_image_dropdown = QComboBox()
+        self.multiple_or_single_image_dropdown.addItems(["Multiple","Single"])
         self.hbox1 = QHBoxLayout()
         self.hbox1.addWidget(self.image_folder_input)
         self.hbox1.addWidget(self.browse_folder_btn)
-        
-        self.luminol_formula_img_label = QLabel()
-        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("eclmechanism.png")))
-        self.luminol_formula_img_label.setAlignment(Qt.AlignCenter)
+        self.hbox1.addWidget(self.multiple_or_single_image_dropdown)
 
         self.reagent_text_label = QLabel("Reagent: ")
         self.reagent_dropdown = QLabel("Luminol")        
@@ -388,12 +387,60 @@ class MainWindow(QMainWindow):
             path = QFileDialog.getExistingDirectory(self, "Select Folder")
         input_element.setText(path)
     
+    def tab_one_browse_folder_or_image(self):
+        if self.multiple_or_single_image_dropdown.currentText().strip() == "Single":
+            path, _ = QFileDialog.getOpenFileName(self, filter=";;".join([f"{desc} ({ext})" for desc, ext in [("Image", "*.jpg"),("GIF", "*.gif"),("Image", "*.jpeg"),("Image", "*.png")]]))
+        else:
+            path = QFileDialog.getExistingDirectory(self, "Select Folder")
+        self.image_folder_input.setText(path)
+
+    def save_image_intensity_data(self):
+        global DATA
+        if len(DATA) > 0:
+            x = save_data()
+            if x is None:
+                self.footer_label.setText("Please calculate Image Intensities before saving data")
+
     def check_path_image_input(self):
         if os.path.exists(self.image_folder_input.text()):
-            initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.text())
-            timer.start(1)
+            if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
+                initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.text())
+                timer.start(1)
+            elif self.image_folder_input.text().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
+                self.image_folder_input.setDisabled(True)
+                image_path = self.image_folder_input.text()
+                self.footer_label.setText("Processiong..... ")
+                reagent = self.reagent_dropdown.text()
+                if image_path.endswith(".gif"):
+                    from image_analysis import getFrame
+                    image = getFrame(image_path)
+                else:
+                    from image_analysis import imread
+                    image = imread(image_path)
+                from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
+                hsv_image = cvtColor(image,40)
+                reagent_ranges = {"Luminol": LUMINOL_RANGES}
+                x_val,_,crop_cords = calculateMean(image, hsv_image, reagent_ranges[reagent][0], 8500)
+                for i in reagent_ranges[reagent][1:]:
+                        if x_val == 0:
+                            x_val,_,crop_cords = calculateMean(image, hsv_image, i, 8500)
+                        else:
+                            break
+                i5 = image[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
+                from numpy import uint8
+                i5 = Image.fromarray(uint8(cvtColor(i5,4)))
+                i5 = i5.resize((200, (200*i5.height//i5.width)))
+                from numpy import array
+                from image_analysis import numpy_to_qt_image
+                self.image_label.setPixmap(QPixmap(numpy_to_qt_image(array(i5), swapped=False)))
+                self.image_label.setVisible(True)
+                self.dynamic_label.setVisible(True)
+                self.dynamic_label.setText(f"Intensity: {x_val}")
+                self.footer_label.setText("Done. Please save to download in an .xlsx file.")
+            else:
+                self.footer_label.setText("Please enter a valid image/gif path")
         else:
-            self.footer_label.setText("Please enter  a valid folderpath")
+            self.footer_label.setText("Please enter a valid path")
 
     def load_listbox_bloc(self):
         if os.path.exists(self.data_analysis_file_input_bar.text().strip()) and self.data_analysis_file_input_bar.text().endswith((".xlsx",".xls")):
