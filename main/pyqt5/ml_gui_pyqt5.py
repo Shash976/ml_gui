@@ -378,6 +378,38 @@ class MainWindow(QMainWindow):
         self.prediction_layout.addLayout(self.prediction_vbox3)
 
         self.prediction_tab.setLayout(self.prediction_layout)
+
+        #About Us Tab
+        self.about_layout = QVBoxLayout()
+
+        self.organisation_logo_hbox = QHBoxLayout()
+        self.bits_image_about = QLabel()
+        self.mmne_image_about = QLabel()
+
+        i1 = Image.open(resource_path("bits_logo.jpg"))
+        i1 = i1.resize((250, 250*i1.height//i1.width))
+        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i1), swapped=False)))
+        i2 = Image.open(resource_path("mmne.jpg"))
+        i2 = i2.resize((250, 250*i2.height//i2.width))
+        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
+        self.organisation_logo_hbox.addWidget(self.bits_image_about)
+        self.organisation_logo_hbox.addWidget(self.mmne_image_about)
+        self.about_layout.addLayout(self.organisation_logo_hbox)
+
+        self.about_text_hbox = QHBoxLayout()
+        self.about_text = QLabel(
+            """MEMS, Microfluidics and Nanoelectronics Lab is a collaborative effort \nacross the departments at BITS-Pilani, Hyderabad Campus.\n The lab is spread across 2500 sqft. It has various fabrication,\n characterization and testing facilities. The lab majorly focuses on the development \nof miniaturized sensing/monitoring devices for various Energy,\nBiomedical and Biochemical applications. \n\nFor further information visit www.mmne.in""")
+        self.about_text.setFont(QFont("Calibri", pointSize=20, weight=30, italic=False))
+        #self.team_image = QLabel()
+        #i3 = Image.open(resource_path("MMNE_Compressed.png"))
+        #i3 = i3.resize((250, 250*i3.height//i3.width))
+        #self.team_image.setPixmap(QPixmap(numpy_to_qt_image(array(i3), swapped=False)))
+        self.about_text_hbox.addWidget(self.about_text)
+        #self.about_text_hbox.addWidget(self.team_image)
+        self.about_layout.addLayout(self.about_text_hbox)
+
+        self.about_us_tab.setLayout(self.about_layout)
+
         # Add tab widget to main layout
         self.main_layout.addWidget(self.tab_widget)
 
@@ -399,7 +431,7 @@ class MainWindow(QMainWindow):
         elements += self.getElements(self.data_layout)
         elements += self.getElements(self.image_layout)
         for element in elements:
-            if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)]:
+            if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)] and element not in [self.about_text]:
                 element.setFont(self.main_font)
                 if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.image_luminol_experiment_img_label,self.luminol_experiment_img_label,self.dynamic_label, self.image_label]:
                     element.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
