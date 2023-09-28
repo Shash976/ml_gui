@@ -1,4 +1,4 @@
-from cv2 import imread, cvtColor, inRange, VideoCapture
+from cv2 import cvtColor, inRange, VideoCapture, imdecode
 from processing import makeExcel, os, np, pd
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
 from PyQt5.QtGui import QImage, QPixmap
@@ -9,7 +9,7 @@ Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
 LUMINOL_RANGES = [210, 175,170, 160,140,80,55, 40]
-basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=CRITICAL)
+basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=ERROR)
 
 def getFrame(gif_path):
     gif = VideoCapture(gif_path)
@@ -50,15 +50,17 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         if image.endswith(".gif"):
             image_array = getFrame(image)
         else:
-            image_array = imread(image)
+            image_array = imdecode(np.fromfile(image, dtype=np.uint8), -1)
         debug(f"is Mean works till line 25")                       
-        mean, crop_cords = getMean(image_array, conc, data_frame=data, X=X, Y=Y, reagent="Luminol")
+        mean, crop_cords = getMean(image, conc, data_frame=data, X=X, Y=Y, reagent="Luminol")
         debug(f"is Mean works till line 27")  
         mean_label.setVisible(True)
-        mean_label.setText(f"Intensity: {round(mean,2)}")
+        mean_label.setText(f"Intensity: {round(mean,2)} | File : {image}")
         debug(f"{mean} is Mean works till line 29")   
-        im = image_array[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
+        im = image_array[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]+10]
+        debug("61", im)
         im = fromarray(np.uint8(cvtColor(im,4)))
+        debug("63", im, type(im))
         im.resize((200, (200*im.height//im.width)))
         im = np.array(im)
         im = cvtColor(im,4)
@@ -72,73 +74,94 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         debug("----------------------------------")
         return data
     except Exception as e:
-        error(f"Error - > {e}")
-        status_label.setText(f"Error -> {e}")
+        error(f"{image} Error - > {e}")
+        status_label.setText(f"{image} Error -> {e}")
         return None
 
-
 def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol"):
-    if type(image) is str:
-        if image.endswith(".gif"):
-                image = getFrame(image)
-        else:
-            image = imread(image)
-    mean = 0
+    image_name = image
+    image = getFrame(image) if isinstance(image, str) and image.endswith(".gif") else imdecode(np.fromfile(image, dtype=np.uint8), -1) if isinstance(image, str) else image
     hsv_img = cvtColor(image, 40)
-    debug("\t\t\t working... line 32")
-    if reagent == "Luminol":
-        lightness_ranges = LUMINOL_RANGES
-    for lightness in lightness_ranges:
-        mean, p_length, crop_cords = calculateMean(image, hsv_img, lightness)
-        debug("\t\t\t working... line 35")
-        if p_length < 10000:
-            debug("\t\t\t working... line 37")
-            continue 
-        elif len(data_frame) > 2:
-            prev_mean = data_frame[X].iloc[-1]
-            req_range = 7 if data_frame[Y].iloc[-1] == concentration else 17
-            debug("\t\t\t working... line 42")
-            t_mean = mean
-            t_lightness = lightness
-            while abs(t_mean-prev_mean) > req_range:
-                if t_mean > prev_mean:
-                    t_lightness = lightness_ranges[lightness_ranges.index(t_lightness)+1]
-
-                    debug("\t\t\t working... line 47")
-                else:
-                    t_lightness = lightness_ranges[lightness_ranges.index(t_lightness)-1]
-                    debug("\t\t\t working... line 50")
-                t_mean, _, crop_cords = calculateMean(image, hsv_img, t_lightness)
-                info(f"\t\t\t working... line 53 t_mean is {t_mean} at lightness {t_lightness}")
-            mean = t_mean
-            debug("\t\t\t working... line 56")
-            lightness = t_lightness
-            debug("\t\t\t working... line 58")
-            return mean, crop_cords
+    lightness_ranges = LUMINOL_RANGES if reagent == "Luminol" else []
+    mean, image_area, crop_cords = getPlainMean(image)
+    if len(data_frame) > 2:
+        req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
+        prev_conc_data = data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]
+        mean_of_prev_means = round(prev_conc_data[X].mean()) 
+        if data_frame[Y].iloc[-1] == concentration and len(data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]) == 1:
+            mean_of_prev_means = (data_frame[data_frame[Y]==data_frame[Y].iloc[-2]][X].max() + data_frame[X].iloc[-1])/2 
+            debug(f"Prev Mean changed to {mean_of_prev_means} by -> {data_frame[data_frame[Y]==data_frame[Y].iloc[-2]][X].max()} + {data_frame[X].iloc[-1]} / 2 ")
+        max_of_prev_means = round(prev_conc_data[X].max()) 
+        t_mean = mean
+        t_crop_cords = crop_cords
+        t_means = []
+        t_means_residuals = []
+        t_crop_cords_list = []
+        debug(f"{image_name} Initial Mean: {mean}")
+        debug(f"\t Mean to compare to: {mean_of_prev_means if data_frame[Y].iloc[-1] == concentration else max_of_prev_means}")
+        for lightness_index in range(len(lightness_ranges)):
+            t_mean, _, t_crop_cords  = calculateMean(image, hsv_img, lightness_ranges[lightness_index])
+            t_mean = round(t_mean)
+            debug(f"\t\t {t_mean} at {lightness_ranges[lightness_index]}")
+            lightness_index += 1
+            t_means.append(t_mean)
+            t_means_residuals.append(t_mean-max_of_prev_means if data_frame[Y].iloc[-1] < concentration else abs(t_mean-mean_of_prev_means))
+            t_crop_cords_list.append(t_crop_cords)
+            if data_frame[Y].iloc[-1] == concentration and abs(t_mean-mean_of_prev_means) <= req_range:
+                debug(f"\t\t\t Conectration == EQUAL. {abs(t_mean-mean_of_prev_means)} is in the range")
+                break
+            elif data_frame[Y].iloc[-1] < concentration and t_mean-max_of_prev_means <= req_range and t_mean-max_of_prev_means >= 2:
+                debug(f"\t\t\t Conectration != UNEQUAL. {t_mean-max_of_prev_means} is in the range")
+                break
+        if data_frame[Y].iloc[-1] == concentration and abs(t_mean-mean_of_prev_means) > req_range:
+            t_mean = t_means[t_means_residuals.index(min(t_means_residuals))]    
+            debug(f"\tNew t_mean ({'equal' if data_frame[Y].iloc[-1] == concentration else 'UNEQUAL'} conc): {t_mean}")
         else:
-            debug("\t\t\t working... line 61")
-            break
+            if data_frame[Y].iloc[-1] < concentration and abs(t_mean-max_of_prev_means) > req_range or t_mean-max_of_prev_means < 0:
+                if len([i for i in t_means_residuals if i >= 0]) == 0:
+                    try:
+                        t_mean = max(t_means)
+                        debug("\t\t\t\t t_mean through max")
+                    except:
+                        pass
+                else:
+                    t_mean = t_means[t_means_residuals.index(min([i for i in t_means_residuals if i >= 0]))]
+                    debug(f"\t\t\t\t t_mean through min. {t_means[t_means_residuals.index(min([i for i in t_means_residuals if i >= 0]))]} {t_means_residuals.index(min([i for i in t_means_residuals if i >= 0]))} {t_means_residuals} {min([i for i in t_means_residuals if i >= 0])} {[i for i in t_means_residuals if i >= 0]} {t_means}")
+                debug(f"\tNew t_mean UNEQUAL conc: {t_mean}")
+        t_crop_cords = t_crop_cords_list[t_means.index(t_mean)] if t_mean > 0 else max(t_means) if max(t_means) > 0 else crop_cords
+        mean = t_mean if t_mean > 0 else max(t_means) if max(t_means) > 0 else mean
+        crop_cords = t_crop_cords if t_mean > 0 else crop_cords
+        debug("RETURNED")
     return mean, crop_cords
 
+def getPlainMean(image):
+    ranges = LUMINOL_RANGES
+    i = 0
+    mean = 0
+    hsv_img = cvtColor(image, 40)
+    while i < len(ranges) and mean==0 or type(mean) not in [float, int, np.float64, np.float32]:
+        mean, area, crop_cords = calculateMean(image, hsv_img, ranges[i])
+        if mean > 0:
+            break
+        i+=1
+    return mean,area, crop_cords
 
-def calculateMean(image, hsv_image, lightness, min_pix=0):
-    min_range, max_range = [np.array([110,170, lightness]), np.array([120, 255,255])]
+def calculateMean(image, hsv_image, lightness):
+    min_range, max_range = [np.array([110,170, lightness]), np.array([130, 255,255])]
     mask = inRange(hsv_image, min_range, max_range)
-    debug("\t\t\t working... line 69")
     required_pixels = image[mask==255]
-    info(f"\t\t\t working... line 70; size of required pixels is {required_pixels.shape[0]} at lightness {lightness}")
-    mean =0
+    mean = 0
     crop_cords = {}
-    if required_pixels.shape[0] > min_pix:
-        debug("\t\t\t working... line 72; calculated mean is ")
-        mean = np.mean(required_pixels)
-        y_cords, x_cords = np.where(mask==255)
-        crop_cords["Max-X"] = np.max(x_cords)
-        crop_cords["Max-Y"] = np.max(y_cords)
-        crop_cords["Min-X"] = np.min(x_cords)
-        crop_cords["Min-Y"] = np.min(y_cords)
-        info(f"\t\t\t\t {mean} at line 75")
-    return mean, required_pixels.shape[0], crop_cords
+    for required_size in range(10000, 4500, -250):
+        if required_pixels.size > required_size:
+            mean = np.mean(required_pixels)
+            y_cords, x_cords = np.where(mask==255)
+            crop_cords["Max-X"] = np.max(x_cords)
+            crop_cords["Max-Y"] = np.max(y_cords)
+            crop_cords["Min-X"] = np.min(x_cords)
+            crop_cords["Min-Y"] = np.min(y_cords)
+            break
+    return mean, required_pixels.size, crop_cords
 
 def is_float(x):
     try:

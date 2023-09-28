@@ -3,26 +3,25 @@ import os
 import numpy as np
 import pandas as pd
 import openpyxl
-from findmaxima2d import find_local_maxima, find_maxima
 
-path = r"C:\Users\shashg\Documents\AI_Data"    
-
+path = r"C:\Users\shash\Downloads\ITO SE ECL\ITO SE ECL\H2O2"
 data = {
         "Concentration":[],
         "Intensity":[],
         "Lightness":[],
         "Image":[],
-        "Residual":[]
         }
 
+zeroes = []
+
 def getMean(image_path, concentration):
-    image = cv2.imread(image_path)
+    image = cv2.imdecode(np.fromfile(image_path, dtype=np.uint8), cv2.IMREAD_UNCHANGED)
     print(f"Working with {image_path}")
     mean = 0
     hsv_img = cv2.cvtColor(image, cv2.COLOR_BGR2HSV)
     val_ranges = [210, 175,170, 160, 140, 125, 80, 55, 40, 20]
     for min_lightness in val_ranges:
-        ranges = [np.array([110, 170, min_lightness]), np.array([120,255,255])]
+        ranges = [np.array([110, 170, min_lightness]), np.array([130,255,255])]
         mask = cv2.inRange(hsv_img, ranges[0], ranges[1])
         pixels = []
         rows, cols = np.where(mask==255)
@@ -54,6 +53,9 @@ def getMean(image_path, concentration):
                             print(f"\t\t New Lightness: {t_lightness}")   
                         test_mean = set_mean(image,  t_lightness)
                         print(f"\t\t Test Mean: {test_mean}")
+                        if type(test_mean) not in [int, float]:
+                            test_mean = 0
+                            break
                     mean = test_mean
                     min_lightness = t_lightness
                 elif data["Concentration"][-1] == concentration:
@@ -73,13 +75,16 @@ def getMean(image_path, concentration):
                             print(f"\t\t New Lightness: {t_lightness}")
                         test_mean = set_mean(image,  t_lightness)
                         print(f"\t\t Test Mean: {test_mean}")
+                        if type(test_mean) not in [int, float, np.float64, np.int8, np.float32]:
+                            test_mean = 0
+                            break
                     mean = test_mean
                     min_lightness = t_lightness
             return mean, min_lightness
     
 
 def set_mean(image, prev_light):
-    n_ranges = [np.array([110, 170, prev_light]), np.array([120,255,255])]
+    n_ranges = [np.array([110, 170, prev_light]), np.array([130,255,255])]
     t_mask = cv2.inRange(cv2.cvtColor(image, cv2.COLOR_BGR2HSV), n_ranges[0], n_ranges[1])
     t_pixels = []
     t_rows, t_cols = np.where(t_mask==255)
@@ -130,10 +135,12 @@ for folder_name in os.listdir(path):
                         data["Concentration"].append(concentration)
                         data['Intensity'].append(mean)
                         data["Lightness"].append(lightness)
-                        data["Image"].append(float(os.path.splitext(os.path.split(filepath)[1])[0]))
-                        data["Residual"].append(abs(float(os.path.splitext(os.path.split(filepath)[1])[0]) - mean))
+                        data["Image"].append(os.path.split(filepath)[1])
                         print(f"{file_name} done -> {mean} at {lightness}")
+                        if mean == 0 or mean < 10:
+                            zeroes.append(filepath)
         except Exception as err:
             print(err)
 
-makeExcel(os.path.join(path, "testing.xlsx"), data, "Residual", False)
+makeExcel(os.path.join(path, "testing.xlsx"), data,"Concentration", True)
+print(zeroes)

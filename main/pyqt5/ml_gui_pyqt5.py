@@ -6,6 +6,7 @@ import os
 from time import time
 from processing import makeExcel
 from processing import process_main
+from image_analysis import imdecode, np, is_float
 from model_def import ML_Model, x,y
 from PIL import Image
 import sys
@@ -29,8 +30,13 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
     if os.path.exists(folder_path_args):
         folder_path = folder_path_args
         subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-        from image_analysis import is_float
-        total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))] 
+        def extract_numeric_value(path):
+            parts = os.path.split(path)[1].split(" ")
+            for part in parts:
+                if is_float(part):
+                    return float(part)
+        subfolder_paths = sorted(subfolder_paths, key=extract_numeric_value)
+        total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))] 
         current_index = 0
         y_title = "Concentration"
         x_title = "Intensity"
@@ -157,17 +163,12 @@ class MainWindow(QMainWindow):
         self.image_layout.addLayout(self.image_analysis_vbox1)
 
         self.luminol_formula_img_label = QLabel()
-        self.ecl_mechanism_image = Image.open(resource_path("eclmechanism.png"))
-        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("eclmechanism.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.4)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
+        self.ecl_mechanism_image = Image.open(resource_path("luminol_formula-min.png"))
+        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("luminol_formula-min.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.4)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
         self.luminol_formula_img_label.setAlignment(Qt.AlignRight)
-        self.image_luminol_experiment_img_label = QLabel()
-        self.image_luminol_experiment_img_label.setPixmap(QPixmap(resource_path("luminol_experiment.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.45)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
-        self.image_luminol_experiment_img_label.setAlignment(Qt.AlignRight)
 
         self.image_analysis_formulas_vbox = QVBoxLayout()
         self.image_analysis_formulas_vbox.addWidget(self.luminol_formula_img_label)
-        self.image_analysis_formulas_vbox.addWidget(self.image_luminol_experiment_img_label)
-        # Empty label for image
         self.image_label = QLabel()
         self.image_label.setVisible(False)
 
@@ -433,7 +434,7 @@ class MainWindow(QMainWindow):
         for element in elements:
             if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)] and element not in [self.about_text]:
                 element.setFont(self.main_font)
-                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.image_luminol_experiment_img_label,self.luminol_experiment_img_label,self.dynamic_label, self.image_label]:
+                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, '''self.image_luminol_experiment_img_label''',self.luminol_experiment_img_label,self.dynamic_label, self.image_label]:
                     element.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
                     if type(element)==type(self.footer_label) and element not in [self.dynamic_label, self.image_label]:
                         element.setAlignment(Qt.AlignLeft)
@@ -478,23 +479,14 @@ class MainWindow(QMainWindow):
             elif self.image_folder_input.text().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
                 self.image_folder_input.setDisabled(True)
                 image_path = self.image_folder_input.text()
-                self.footer_label.setText("Processiong..... ")
-                reagent = self.reagent_dropdown.text()
+                self.footer_label.setText("Processing..... ")
                 if image_path.endswith(".gif"):
                     from image_analysis import getFrame
                     image = getFrame(image_path)
                 else:
-                    from image_analysis import imread
-                    image = imread(image_path)
-                from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
-                hsv_image = cvtColor(image,40)
-                reagent_ranges = {"Luminol": LUMINOL_RANGES}
-                x_val,_,crop_cords = calculateMean(image, hsv_image, reagent_ranges[reagent][0], 8500)
-                for i in reagent_ranges[reagent][1:]:
-                        if x_val == 0:
-                            x_val,_,crop_cords = calculateMean(image, hsv_image, i, 8500)
-                        else:
-                            break
+                    image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
+                from image_analysis import cvtColor, getPlainMean
+                x_val,_,crop_cords = getPlainMean(image)
                 i5 = image[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
                 from numpy import uint8
                 i5 = Image.fromarray(uint8(cvtColor(i5,4)))
@@ -671,8 +663,7 @@ class MainWindow(QMainWindow):
                     from image_analysis import getFrame
                     image = getFrame(image_path)
                 else:
-                    from image_analysis import imread
-                    image = imread(image_path)
+                    image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
                 from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
                 hsv_image = cvtColor(image,40)
                 reagent_ranges = {"Luminol": LUMINOL_RANGES}
@@ -696,7 +687,7 @@ class MainWindow(QMainWindow):
             from prediction import predict_value, load, download_predictions
             loaded_models = load(self.prediction_file_input.text().strip())
             predictions, label_text = predict_value(x_val, loaded_models)
-            self.results_label.setText(f"At Intensity of {x_val}, the predicted Conentrations are \n{label_text}" )
+            self.results_label.setText(f"At Intensity of {x_val}, the predicted Concentrations are \n{label_text}" )
             self.download_results_tn.clicked.connect(lambda:(download_predictions(x_val, predictions, parentPath=self.prediction_file_input.text().strip()), self.footer_label.setText("Downloaded")))
             self.load_elements(self.prediction_vbox3)
             self.footer_label.setText("Done")
