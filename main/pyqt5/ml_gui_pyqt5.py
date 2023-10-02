@@ -29,7 +29,7 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
     reagent = reagent_args
     if os.path.exists(folder_path_args):
         folder_path = folder_path_args
-        subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
+        subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if any([is_float(p) for p in path.split(" ")]) if os.path.isdir(os.path.join(folder_path, path))]
         def extract_numeric_value(path):
             parts = os.path.split(path)[1].split(" ")
             for part in parts:
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
         
         # Header
         self.header_bits_image = QLabel()
-        i1 = Image.open(resource_path("bits_logo.jpg"))
+        i1 = Image.open(resource_path("media/bits_logo.jpg"))
         i1 = i1.resize((50, (50*i1.height//i1.width)))
         from numpy import array
         from image_analysis import numpy_to_qt_image
@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         self.header_label.setFont(self.header_font)
         self.header_label.setAlignment(Qt.AlignCenter)
         self.header_lab_image = QLabel()
-        i2 = Image.open(resource_path("mmne.jpg"))
+        i2 = Image.open(resource_path("media/mmne.jpg"))
         i2 = i2.resize((50, (50*i2.height//i2.width)))
         self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
         self.header_lab_image.setAlignment(Qt.AlignRight)
@@ -163,8 +163,8 @@ class MainWindow(QMainWindow):
         self.image_layout.addLayout(self.image_analysis_vbox1)
 
         self.luminol_formula_img_label = QLabel()
-        self.ecl_mechanism_image = Image.open(resource_path("luminol_formula-min.png"))
-        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("luminol_formula-min.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.4)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
+        self.ecl_mechanism_image = Image.open(resource_path("media/luminol_formula-min.png"))
+        self.luminol_formula_img_label.setPixmap(QPixmap(resource_path("media/luminol_formula-min.png")).scaled(int(QApplication.primaryScreen().size().width()*0.4),(int(QApplication.primaryScreen().size().width()*0.4)*self.ecl_mechanism_image.height)//self.ecl_mechanism_image.width, Qt.KeepAspectRatio))
         self.luminol_formula_img_label.setAlignment(Qt.AlignRight)
 
         self.image_analysis_formulas_vbox = QVBoxLayout()
@@ -312,7 +312,7 @@ class MainWindow(QMainWindow):
         self.prediction_layout.addLayout(self.prediction_hbox1)
 
         self.luminol_experiment_img_label = QLabel()
-        self.luminol_experiment_img_label.setPixmap(QPixmap(resource_path("luminol_experiment.png")))
+        self.luminol_experiment_img_label.setPixmap(QPixmap(resource_path("media/luminol_experiment.png")))
         self.prediction_layout.addWidget(self.luminol_experiment_img_label)
 
         self.prediction_reagent_label = QLabel("Reagent: ")
@@ -387,10 +387,10 @@ class MainWindow(QMainWindow):
         self.bits_image_about = QLabel()
         self.mmne_image_about = QLabel()
 
-        i1 = Image.open(resource_path("bits_logo.jpg"))
+        i1 = Image.open(resource_path("media/bits_logo.jpg"))
         i1 = i1.resize((250, 250*i1.height//i1.width))
         self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i1), swapped=False)))
-        i2 = Image.open(resource_path("mmne.jpg"))
+        i2 = Image.open(resource_path("media/mmne.jpg"))
         i2 = i2.resize((250, 250*i2.height//i2.width))
         self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
         self.organisation_logo_hbox.addWidget(self.bits_image_about)
@@ -401,10 +401,6 @@ class MainWindow(QMainWindow):
         self.about_text = QLabel(
             """MEMS, Microfluidics and Nanoelectronics Lab is a collaborative effort \nacross the departments at BITS-Pilani, Hyderabad Campus.\n The lab is spread across 2500 sqft. It has various fabrication,\n characterization and testing facilities. The lab majorly focuses on the development \nof miniaturized sensing/monitoring devices for various Energy,\nBiomedical and Biochemical applications. \n\nFor further information visit www.mmne.in""")
         self.about_text.setFont(QFont("Calibri", pointSize=20, weight=30, italic=False))
-        #self.team_image = QLabel()
-        #i3 = Image.open(resource_path("MMNE_Compressed.png"))
-        #i3 = i3.resize((250, 250*i3.height//i3.width))
-        #self.team_image.setPixmap(QPixmap(numpy_to_qt_image(array(i3), swapped=False)))
         self.about_text_hbox.addWidget(self.about_text)
         #self.about_text_hbox.addWidget(self.team_image)
         self.about_layout.addLayout(self.about_text_hbox)
