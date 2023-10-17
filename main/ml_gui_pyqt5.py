@@ -36,7 +36,7 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
                 if is_float(part):
                     return float(part)
         subfolder_paths = sorted(subfolder_paths, key=extract_numeric_value)
-        total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))] 
+        total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths for image in os.listdir(sub_folder) if image.lower().endswith((".jpg", ".png", ".jpeg", ".gif"))] 
         current_index = 0
         y_title = "Concentration"
         x_title = "Intensity"
@@ -151,7 +151,8 @@ class MainWindow(QMainWindow):
         self.hbox1.addWidget(self.multiple_or_single_image_dropdown)
 
         self.reagent_text_label = QLabel("Reagent: ")
-        self.reagent_dropdown = QLabel("Luminol")        
+        self.reagent_dropdown = QComboBox()
+        self.reagent_dropdown.addItems(["Luminol", "Ruthenium"])        
         self.choose_reagent_hbox = QHBoxLayout()
         self.choose_reagent_hbox.addWidget(self.reagent_text_label)
         self.choose_reagent_hbox.addWidget(self.reagent_dropdown)
@@ -315,10 +316,11 @@ class MainWindow(QMainWindow):
         self.luminol_experiment_img_label.setPixmap(QPixmap(resource_path("media/luminol_experiment.png")))
         self.prediction_layout.addWidget(self.luminol_experiment_img_label)
 
-        self.prediction_reagent_label = QLabel("Reagent: ")
+        self.prediction_reagent_dropdown = QComboBox()
+        self.prediction_reagent_dropdown.addItems(["Luminol", "Ruthenium"])
         self.prediction_reagent_name = QLabel("Luminol")
         self.prediction_hbox3 = QHBoxLayout()
-        self.prediction_hbox3.addWidget(self.prediction_reagent_label)
+        self.prediction_hbox3.addWidget(self.prediction_reagent_dropdown)
         self.prediction_hbox3.addWidget(self.prediction_reagent_name)
         self.prediction_hbox3.setAlignment(Qt.AlignLeft)
         self.prediction_layout.addLayout(self.prediction_hbox3)
@@ -470,7 +472,7 @@ class MainWindow(QMainWindow):
         global DATA, folder_path
         if os.path.exists(self.image_folder_input.text()):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
-                initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.text())
+                initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText())
                 timer.start(1)
             elif self.image_folder_input.text().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
                 self.image_folder_input.setDisabled(True)
@@ -482,7 +484,8 @@ class MainWindow(QMainWindow):
                 else:
                     image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
                 from image_analysis import cvtColor, getPlainMean
-                x_val,_,crop_cords = getPlainMean(image)
+                x_val,_,crop_cords = getPlainMean(image, self.reagent_dropdown.currentText())
+                #print(x_val, "  " , crop_cords, self.reagent_dropdown.currentText())
                 i5 = image[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
                 from numpy import uint8
                 i5 = Image.fromarray(uint8(cvtColor(i5,4)))
@@ -630,7 +633,7 @@ class MainWindow(QMainWindow):
             Y=y
             self.hide_elements(self.data_layout)
         elif layout == self.prediction_layout:
-            self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_experiment_img_label,self.prediction_load_file_btn,self.prediction_reagent_label]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
+            self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_experiment_img_label,self.prediction_load_file_btn,self.prediction_reagent_dropdown]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
 
     def load_models(self):
         if os.path.exists(self.prediction_file_input.text().strip()) and self.prediction_file_input.text().strip().endswith(".xlsx"):
@@ -653,20 +656,19 @@ class MainWindow(QMainWindow):
             if os.path.exists(self.prediction_image_input.text()) and self.prediction_image_input.text().endswith((".gif",".jpg", ".jpeg", ".png")):
                 self.prediction_image_input.setDisabled(True)
                 image_path = self.prediction_image_input.text()
-                reagent = self.prediction_reagent_name.text()
-                self.prediction_reagent_name.setDisabled(True)
+                reagent = self.prediction_reagent_dropdown.currentText()
+                self.prediction_reagent_dropdown.setDisabled(True)
                 if image_path.endswith(".gif"):
                     from image_analysis import getFrame
                     image = getFrame(image_path)
                 else:
                     image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
-                from image_analysis import cvtColor, calculateMean, LUMINOL_RANGES
+                from image_analysis import cvtColor, calculateMean, VAL_RANGES
                 hsv_image = cvtColor(image,40)
-                reagent_ranges = {"Luminol": LUMINOL_RANGES}
-                x_val,_,_ = calculateMean(image, hsv_image, reagent_ranges[reagent][0], 8500)
-                for i in reagent_ranges[reagent][1:]:
+                x_val,_,_ = calculateMean(image, hsv_image, VAL_RANGES[0], 8500, reagent)
+                for i in VAL_RANGES[1:]:
                         if x_val == 0:
-                            x_val,_,_ = calculateMean(image, hsv_image, i, 8500)
+                            x_val,_,_ = calculateMean(image, hsv_image, i, 8500, reagent)
                         else:
                             break
             else:

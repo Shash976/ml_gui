@@ -10,23 +10,23 @@ import os
 Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
-LUMINOL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
+VAL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
 basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
 global total_images
 
-def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label):
+def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
     global total_images
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
     total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))]
     for i, image in enumerate(total_images):
-        data = processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, "Luminol", DATA)
+        data = processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent, DATA)
         if data:
             continue
         else:
             return
     makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=Y)
 
-def processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent="Luminol",data=DATA):
+def processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent,data=DATA):
     try:
         conc=None
         for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
@@ -43,7 +43,7 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         else:
             image_array = imdecode(np.fromfile(image, dtype=np.uint8), -1)
         debug(f"is Mean works till line 25")                       
-        mean, crop_cords = getMean(image, conc, data_frame=data, X=X, Y=Y, reagent="Luminol", total_images=total_images)
+        mean, crop_cords = getMean(image, conc, data_frame=data, reagent=reagent, X=X, Y=Y, total_images=total_images)
         debug(f"is Mean works till line 27")  
         mean_label.setVisible(True)
         mean_label.setText(f"Intensity: {round(mean,2)} | File : {os.path.join(os.path.split(os.path.split(image)[0])[1],os.path.split(image)[1])}")
@@ -73,18 +73,18 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol",
     image_name = image
     image = get_image_array(image)
     hsv_img = cvtColor(image, 40)
-    lightness_ranges = LUMINOL_RANGES if reagent == "Luminol" else []
-    mean, _, crop_cords = getPlainMean(image)
+    lightness_ranges = VAL_RANGES if reagent.lower() in ["luminol", "ruthenium"] else []
+    mean, _, crop_cords = getPlainMean(image, reagent)
     if len(data_frame) > 2:
         req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
         prev_conc_data = data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]
         mean_of_prev_means = round(prev_conc_data[X].mean())
         mean_of_prev_means = (data_frame[data_frame[Y]==data_frame[Y].iloc[-2]][X].max() + data_frame[X].iloc[-1])/2 if data_frame[Y].iloc[-1] == concentration and len(data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]) == 1 else mean_of_prev_means
         max_of_prev_means = round(prev_conc_data[X].max()) 
-        next_image_mean = getPlainMean(get_image_array(total_images[total_images.index(image_name) + 1])) if total_images.index(image_name)+1 < len(total_images) else (0,0,0)
+        next_image_mean = getPlainMean(get_image_array(total_images[total_images.index(image_name) + 1]), reagent) if total_images.index(image_name)+1 < len(total_images) else (0,0,0)
         next_image_mean = next_image_mean[0]
         info(f"{image_name} Initial Mean: {mean}\n\t Mean to compare to: {mean_of_prev_means if data_frame[Y].iloc[-1] == concentration else max_of_prev_means}")
-        mean, crop_cords = addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, data_frame[Y].iloc[-1] == concentration) 
+        mean, crop_cords = addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, data_frame[Y].iloc[-1] == concentration, reagent) 
     if len(crop_cords.keys()) == 4:
         selected_area = crop_image(image, crop_cords, pad=0)
         if mean - np.mean(selected_area) > 10:
@@ -96,7 +96,7 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol",
             for i in range(area_to_check.shape[0]):
                 if np.sum(thresh[i, :]) == 0 and i+2 < area_to_check.shape[0] and i-3>0:
                     if all([np.sum(thresh[i+n,:]) == 0 for n in range(-3, 3)]):
-                        means = [getPlainMean(area_to_check[:i+2,:,:]), getPlainMean(area_to_check[i-3:,:,:])]
+                        means = [getPlainMean(area_to_check[:i+2,:,:], reagent), getPlainMean(area_to_check[i-3:,:,:], reagent)]
                         to_check = [new_mean, means[0][0], means[1][0]]
                         new_mean = max(to_check)
                         if new_mean in [means[0][0], means[1][0]]:
@@ -104,7 +104,7 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol",
             for i in range(area_to_check.shape[1]):
                 if np.sum(thresh[:,i]) == 0 and i+2 < area_to_check.shape[1] and i-3>0:
                     if all([np.sum(thresh[:,i+n]) == 0 for n in range(-3, 3)]):
-                        means = [getPlainMean(area_to_check[:,:i+2,:]), getPlainMean(area_to_check[:,i-3:,:])]
+                        means = [getPlainMean(area_to_check[:,:i+2,:], reagent), getPlainMean(area_to_check[:,i-3:,:], reagent)]
                         to_check = [new_mean, means[0][0], means[1][0]]
                         new_mean = max(to_check)
                         if new_mean in [means[0][0], means[1][0]]:
@@ -113,11 +113,11 @@ def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol",
             crop_cords = new_crop_cords
     return mean, crop_cords
 
-def addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, same_conc):
+def addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, same_conc, reagent):
     temporary_mean, temporary_crop_cords = mean, crop_cords
     temporary_means_list, temporary_means_residuals, temporary_crop_cords_list = [],[],[]
     for lightness_index in range(len(lightness_ranges)):
-        temporary_mean, _, temporary_crop_cords  = calculateMean(image, hsv_img, lightness_ranges[lightness_index])
+        temporary_mean, _, temporary_crop_cords  = calculateMean(image, hsv_img, lightness_ranges[lightness_index], reagent)
         temporary_mean_rounded = round(temporary_mean)
         difference = temporary_mean_rounded-mean_of_prev_means
         lightness_index += 1
@@ -148,20 +148,26 @@ def addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, m
     debug("RETURNED")
     return mean,crop_cords
 
-def getPlainMean(image):
-    ranges = LUMINOL_RANGES
+def getPlainMean(image, reagent="luminol"):
+    ranges = VAL_RANGES
     i = 0
     mean = 0
     hsv_img = cvtColor(image, 40)
     while i < len(ranges) and mean==0 or type(mean) not in [float, int, np.float64, np.float32]:
-        mean, area, crop_cords = calculateMean(image, hsv_img, ranges[i])
+        mean, area, crop_cords = calculateMean(image, hsv_img, ranges[i], reagent)
         if mean > 0:
             break
         i+=1
     return mean,area, crop_cords
 
-def calculateMean(image, hsv_image, lightness):
-    min_range, max_range = [np.array([110,170, lightness]), np.array([130, 255,255])]
+def calculateMean(image, hsv_image, lightness, reagent):
+    if reagent.lower() == "ruthenium":
+        min_hue = 0
+        max_hue = 20
+    elif reagent.lower() == "luminol":
+        min_hue = 110
+        max_hue = 120
+    min_range, max_range = [np.array([min_hue,170, lightness]), np.array([max_hue, 255,255])]
     mask = inRange(hsv_image, min_range, max_range)
     required_pixels = image[mask==255]
     mean = 0
