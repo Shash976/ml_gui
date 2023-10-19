@@ -74,3 +74,18 @@ gdboost = ML_Model("Gradient Boost", GradientBoostingRegressor(), "Ensemble")
 #xgboost = ML_Model("XGBoost", XGBRegressor(), "Ensemble")
 knn = ML_Model("KNeighbors", KNeighborsRegressor(), "Neighbor")
 svm = ML_Model("Support Vector Machine", SVR(), "SVM")
+
+class Reagent:
+    reagents = []
+    def __init__(self, name, min_hue, max_hue):
+        self.name = name
+        self.min_hue = min_hue
+        self.max_hue = max_hue
+        Reagent.reagents.append(self)
+    def get_reagent(name):
+        for reagent in Reagent.reagents:
+            if reagent.name == name:
+                return reagent
+            
+luminol = Reagent("Luminol", 110, 120)
+ruthenium = Reagent("Ruthenium", 0,20)
