@@ -152,10 +152,13 @@ class MainWindow(QMainWindow):
 
         self.reagent_text_label = QLabel("Reagent: ")
         self.reagent_dropdown = QComboBox()
-        self.reagent_dropdown.addItems(["Luminol", "Ruthenium"])        
+        self.reagent_dropdown.addItems(dropdown_options)
+        self.detected_reagent_label = QLabel()
+        self.detected_reagent_label.setVisible(False)
         self.choose_reagent_hbox = QHBoxLayout()
         self.choose_reagent_hbox.addWidget(self.reagent_text_label)
         self.choose_reagent_hbox.addWidget(self.reagent_dropdown)
+        self.choose_reagent_hbox.addWidget(self.detected_reagent_label)
         self.choose_reagent_hbox.setAlignment(Qt.AlignLeft)
         
         self.image_analysis_vbox1 = QVBoxLayout()
@@ -323,7 +326,7 @@ class MainWindow(QMainWindow):
 
         self.prediction_reagent_label = QLabel("Reagent: ")
         self.prediction_reagent_dropdown = QComboBox()
-        self.prediction_reagent_dropdown.addItems(["Luminol", "Ruthenium"])
+        self.prediction_reagent_dropdown.addItems(dropdown_options)
         self.prediction_hbox3 = QHBoxLayout()
         self.prediction_hbox3.addWidget(self.prediction_reagent_label)
         self.prediction_hbox3.addWidget(self.prediction_reagent_dropdown)
@@ -479,7 +482,7 @@ class MainWindow(QMainWindow):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
                 initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText())
                 timer.start(1)
-            elif self.image_folder_input.text().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
+            elif self.image_folder_input.text().lower().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
                 self.image_folder_input.setDisabled(True)
                 image_path = self.image_folder_input.text()
                 self.footer_label.setText("Processing..... ")
@@ -488,9 +491,16 @@ class MainWindow(QMainWindow):
                     image = getFrame(image_path)
                 else:
                     image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
-                from image_analysis import cvtColor, getPlainMean
-                x_val,_,crop_cords = getPlainMean(image, self.reagent_dropdown.currentText())
-                #print(x_val, "  " , crop_cords, self.reagent_dropdown.currentText())
+                from image_analysis import cvtColor
+                reagent = self.reagent_dropdown.currentText().lower()
+                if "auto" in reagent:
+                    for r in Reagent.reagents:
+                        x_val,area,crop_cords = getPlainMean(image, r.name)
+                        if x_val > 0 and area>1000:
+                            reagent = r.name
+                            break
+                else:
+                    x_val,_,crop_cords = getPlainMean(image, reagent)
                 i5 = image[crop_cords["Min-Y"]-10:crop_cords["Max-Y"]+10, crop_cords["Min-X"]-10:crop_cords["Max-X"]]+10
                 from numpy import uint8
                 i5 = Image.fromarray(uint8(cvtColor(i5,4)))
@@ -668,14 +678,14 @@ class MainWindow(QMainWindow):
                     image = getFrame(image_path)
                 else:
                     image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
-                from image_analysis import cvtColor, calculateMean, VAL_RANGES
-                hsv_image = cvtColor(image,40)
-                x_val,_,_ = calculateMean(image, hsv_image, VAL_RANGES[0], reagent)
-                for i in VAL_RANGES[1:]:
-                        if x_val == 0:
-                            x_val,_,_ = calculateMean(image, hsv_image, i, reagent)
-                        else:
+                if "auto" in reagent.lower():
+                    for r in Reagent.reagents:
+                        x_val, area, _ = getPlainMean(image, r.name)
+                        if x_val>0 and area > 1000:
+                            reagent = r.name
                             break
+                else:
+                    x_val,_,_ = getPlainMean(image, reagent)
             else:
                 self.footer_label.setText("Please enter a valid Image Path.")
                 return

@@ -52,7 +52,7 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         debug(f"61 {type(im)}, {im.size}, {im.shape}")
         im = fromarray(np.uint8(cvtColor(im,4)))
         debug(f"63, {type(im)}")
-        im = im.resize((200, (200*im.height//im.width)))
+        im = im.resize((200*(im.height//im.width), 200))
         im = np.array(im)
         im = cvtColor(im,4)
         image_placeholder.setPixmap(QPixmap(numpy_to_qt_image(im)))
@@ -69,11 +69,11 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         status_label.setText(f"{image} Error -> {e}")
         return None
 
-def getMean(image,concentration, data_frame=DATA, X = X, Y=Y, reagent="Luminol", total_images=[]):
+def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_images=[]):
     image_name = image
     image = get_image_array(image)
     hsv_img = cvtColor(image, 40)
-    lightness_ranges = VAL_RANGES if reagent.lower() in ["luminol", "ruthenium"] else []
+    lightness_ranges = VAL_RANGES if reagent.lower() in [r.name.lower() for r in Reagent.reagents] else []
     mean, _, crop_cords = getPlainMean(image, reagent)
     if len(data_frame) > 2:
         req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
@@ -161,12 +161,10 @@ def getPlainMean(image, reagent="luminol"):
     return mean,area, crop_cords
 
 def calculateMean(image, hsv_image, lightness, reagent):
-    if reagent.lower() == "ruthenium":
-        min_hue = 0
-        max_hue = 20
-    elif reagent.lower() == "luminol":
-        min_hue = 110
-        max_hue = 120
+    reagent = Reagent.get_reagent(reagent)
+    if type(reagent) != Reagent:
+        return False
+    min_hue, max_hue = reagent.min_hue, reagent.max_hue
     min_range, max_range = [np.array([min_hue,170, lightness]), np.array([max_hue, 255,255])]
     mask = inRange(hsv_image, min_range, max_range)
     required_pixels = image[mask==255]
