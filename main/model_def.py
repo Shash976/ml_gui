@@ -84,7 +84,7 @@ class Reagent:
         Reagent.reagents.append(self)
     def get_reagent(name):
         for reagent in Reagent.reagents:
-            if reagent.name == name:
+            if reagent.name.lower().strip() == name.lower():
                 return reagent
             
 luminol = Reagent("Luminol", 110, 120)

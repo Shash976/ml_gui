@@ -21,7 +21,16 @@ def is_float(x):
         return False
     
 def crop_image(image_array, crop_cords, pad=10):
-    """Crops the image given by its coordinates."""
+    """Crops the image given by its coordinates.
+
+    Args:
+        image_array: Image in array form
+        crop_cords: Coordinaties of minimum and maximum points of the image
+        pad: Padding required (Extra image data to be left out) Default value is 10
+    
+    Returns:
+        cropped_image: Image cropped
+    """
     # Handle corner cases where the crop region is outside of the image bounds.
     min_y = max(crop_cords["Min-Y"] - pad, 0)
     max_y = min(crop_cords["Max-Y"] + pad, image_array.shape[0])

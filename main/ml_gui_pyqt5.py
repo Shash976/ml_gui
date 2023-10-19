@@ -6,7 +6,7 @@ import os
 from time import time
 from processing import makeExcel
 from processing import process_main
-from image_analysis import imdecode, np, is_float
+from image_analysis import imdecode, np, is_float, Reagent, getPlainMean
 from model_def import ML_Model, x,y
 from PIL import Image
 import sys
@@ -22,8 +22,8 @@ start_time = time()
 global X, Y
 X = x
 Y = y
-
-def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status_bar_element, status_label_element, image_placeholder_element, mean_label_element, reagent_args="Luminol"):
+dropdown_options = ["Auto Detect"]+[r.name for r in Reagent.reagents]
+def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status_bar_element, status_label_element, image_placeholder_element, mean_label_element, reagent_args):
     global total_images, current_index, DATA, Y, X, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, start_time, folder_path, reagent
     # Initialize your state here, similar to what you do at the beginning of processFolder
     reagent = reagent_args
@@ -37,6 +37,11 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
                     return float(part)
         subfolder_paths = sorted(subfolder_paths, key=extract_numeric_value)
         total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths for image in os.listdir(sub_folder) if image.lower().endswith((".jpg", ".png", ".jpeg", ".gif"))] 
+        if "auto" in reagent:
+            for r in Reagent.reagents:
+                if getPlainMean(imdecode(np.fromfile(total_images[len(total_images)//2], dtype=np.uint8), -1), r.name)[1] > 0:
+                    reagent = r.name
+                    break
         current_index = 0
         y_title = "Concentration"
         x_title = "Intensity"
@@ -47,7 +52,7 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
         status_label_element.setText("Enter a Valid Folderpath")
         return
 
-def partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent="Luminol",n=1):  # You can adjust n based on how many images you want to process at a time
+def partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent,n=1):  # You can adjust n based on how many images you want to process at a time
     global current_index, total_images, DATA
     # Your processing code here, but only for 'n' images starting from current_index
     for i in range(current_index, min(current_index + n, len(total_images))):

@@ -5,6 +5,7 @@ from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, wa
 from PyQt5.QtGui import QImage, QPixmap
 from util import crop_image, getFrame, get_image_array
 from PIL.Image import fromarray
+from model_def import Reagent
 import os
 
 Y = "Concentration"
@@ -148,7 +149,18 @@ def addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, m
     debug("RETURNED")
     return mean,crop_cords
 
-def getPlainMean(image, reagent="luminol"):
+def getPlainMean(image, reagent):
+    """Calculates and returns the plain mean independent of any concentration weights.
+
+    Args:
+        image: Image to calculate intensity of in array form
+        reagent: Name of reagent used to obtain that image, can be either luminol or ruthenium
+
+    Returns:
+        mean: Mean of the image
+        area: Number of pixels in the region of interest
+        crop_cords: Coordinates of the maximum and minimum points of the region of interest
+    """
     ranges = VAL_RANGES
     i = 0
     mean = 0
