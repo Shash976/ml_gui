@@ -312,16 +312,21 @@ class MainWindow(QMainWindow):
         self.prediction_hbox1.addWidget(self.prediction_browse_file_btn)
         self.prediction_layout.addLayout(self.prediction_hbox1)
 
-        self.luminol_experiment_img_label = QLabel()
-        self.luminol_experiment_img_label.setPixmap(QPixmap(resource_path("media/luminol_experiment.png")))
-        self.prediction_layout.addWidget(self.luminol_experiment_img_label)
+        self.prediction_image_labels_hbox = QHBoxLayout()
+        self.luminol_sensor_image_label = QLabel()
+        self.luminol_sensor_image_label.setPixmap(QPixmap(resource_path("media/ECL_biosensor.png")))
+        self.luminol_working_image_label = QLabel()
+        self.luminol_working_image_label.setPixmap(QPixmap(resource_path("media/luminol_working_principle.png")))
+        self.prediction_image_labels_hbox.addWidget(self.luminol_sensor_image_label)
+        self.prediction_image_labels_hbox.addWidget(self.luminol_working_image_label)
+        self.prediction_layout.addLayout(self.prediction_image_labels_hbox)
 
+        self.prediction_reagent_label = QLabel("Reagent: ")
         self.prediction_reagent_dropdown = QComboBox()
         self.prediction_reagent_dropdown.addItems(["Luminol", "Ruthenium"])
-        self.prediction_reagent_name = QLabel("Luminol")
         self.prediction_hbox3 = QHBoxLayout()
+        self.prediction_hbox3.addWidget(self.prediction_reagent_label)
         self.prediction_hbox3.addWidget(self.prediction_reagent_dropdown)
-        self.prediction_hbox3.addWidget(self.prediction_reagent_name)
         self.prediction_hbox3.setAlignment(Qt.AlignLeft)
         self.prediction_layout.addLayout(self.prediction_hbox3)
 
@@ -432,11 +437,11 @@ class MainWindow(QMainWindow):
         for element in elements:
             if type(element) in [type(self.footer_label), type(self.set_models_btn),type(self.image_folder_input), type(self.x_var_dropdown)] and element not in [self.about_text]:
                 element.setFont(self.main_font)
-                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, '''self.image_luminol_experiment_img_label''',self.luminol_experiment_img_label,self.dynamic_label, self.image_label]:
+                if type(element) in [type(self.footer_label), type(self.set_models_btn)] and element not in [self.luminol_formula_img_label, self.luminol_sensor_image_label, self.luminol_working_image_label,'''self.image_luminol_experiment_img_label''',self.dynamic_label, self.image_label]:
                     element.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
                     if type(element)==type(self.footer_label) and element not in [self.dynamic_label, self.image_label]:
                         element.setAlignment(Qt.AlignLeft)
-                elif element in [self.luminol_experiment_img_label, self.image_label, self.dynamic_label]:
+                elif element in [ self.image_label, self.dynamic_label, self.luminol_sensor_image_label, self.luminol_working_image_label,self.luminol_formula_img_label]:
                     element.setAlignment(Qt.AlignCenter)
 
     def browse(self, input_element, is_file=True, file_types=[("Excel Files", "*.xlsx")]):
@@ -633,7 +638,7 @@ class MainWindow(QMainWindow):
             Y=y
             self.hide_elements(self.data_layout)
         elif layout == self.prediction_layout:
-            self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_experiment_img_label,self.prediction_load_file_btn,self.prediction_reagent_dropdown]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
+            self.hide_elements(self.prediction_layout, exempt_list=[self.luminol_working_image_label,self.luminol_sensor_image_label, self.prediction_load_file_btn,self.prediction_reagent_dropdown]+self.getElements(self.prediction_hbox1)+self.getElements(self.prediction_hbox3))
 
     def load_models(self):
         if os.path.exists(self.prediction_file_input.text().strip()) and self.prediction_file_input.text().strip().endswith(".xlsx"):
@@ -653,7 +658,7 @@ class MainWindow(QMainWindow):
     def load_and_predict(self):
         x_val = None
         if "image" in self.select_input_method.currentText().lower():
-            if os.path.exists(self.prediction_image_input.text()) and self.prediction_image_input.text().endswith((".gif",".jpg", ".jpeg", ".png")):
+            if os.path.exists(self.prediction_image_input.text()) and self.prediction_image_input.text().lower().endswith((".gif",".jpg", ".jpeg", ".png")):
                 self.prediction_image_input.setDisabled(True)
                 image_path = self.prediction_image_input.text()
                 reagent = self.prediction_reagent_dropdown.currentText()
@@ -665,10 +670,10 @@ class MainWindow(QMainWindow):
                     image = imdecode(np.fromfile(image_path, dtype=np.uint8), -1)
                 from image_analysis import cvtColor, calculateMean, VAL_RANGES
                 hsv_image = cvtColor(image,40)
-                x_val,_,_ = calculateMean(image, hsv_image, VAL_RANGES[0], 8500, reagent)
+                x_val,_,_ = calculateMean(image, hsv_image, VAL_RANGES[0], reagent)
                 for i in VAL_RANGES[1:]:
                         if x_val == 0:
-                            x_val,_,_ = calculateMean(image, hsv_image, i, 8500, reagent)
+                            x_val,_,_ = calculateMean(image, hsv_image, i, reagent)
                         else:
                             break
             else:
