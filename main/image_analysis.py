@@ -74,7 +74,6 @@ def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_imag
     image_name = image
     image = get_image_array(image)
     hsv_img = cvtColor(image, 40)
-    lightness_ranges = VAL_RANGES if reagent.lower() in [r.name.lower() for r in Reagent.reagents] else []
     mean, _, crop_cords = getPlainMean(image, reagent)
     if len(data_frame) > 2:
         req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
@@ -85,7 +84,7 @@ def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_imag
         next_image_mean = getPlainMean(get_image_array(total_images[total_images.index(image_name) + 1]), reagent) if total_images.index(image_name)+1 < len(total_images) else (0,0,0)
         next_image_mean = next_image_mean[0]
         info(f"{image_name} Initial Mean: {mean}\n\t Mean to compare to: {mean_of_prev_means if data_frame[Y].iloc[-1] == concentration else max_of_prev_means}")
-        mean, crop_cords = addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, data_frame[Y].iloc[-1] == concentration, reagent) 
+        mean, crop_cords = addWeights(image, concentration, data_frame, Y, hsv_img, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, data_frame[Y].iloc[-1] == concentration, reagent) 
     if len(crop_cords.keys()) == 4:
         selected_area = crop_image(image, crop_cords, pad=0)
         if mean - np.mean(selected_area) > 10:
@@ -114,14 +113,19 @@ def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_imag
             crop_cords = new_crop_cords
     return mean, crop_cords
 
-def addWeights(image, concentration, data_frame, Y, hsv_img, lightness_ranges, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, same_conc, reagent):
+def addWeights(image, concentration, data_frame, Y, hsv_img, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, same_conc, reagent):
+    """Adds weights to the plain mean to get a more accurate value in comparision to neighboring images.
+    
+    Returns:
+        mean: Caluclated mean
+        crop_cords: Coordinates of maximum and minimum points
+    """
     temporary_mean, temporary_crop_cords = mean, crop_cords
     temporary_means_list, temporary_means_residuals, temporary_crop_cords_list = [],[],[]
-    for lightness_index in range(len(lightness_ranges)):
-        temporary_mean, _, temporary_crop_cords  = calculateMean(image, hsv_img, lightness_ranges[lightness_index], reagent)
+    for lighntess in VAL_RANGES:
+        temporary_mean, _, temporary_crop_cords  = calculateMean(image, hsv_img, lighntess, reagent)
         temporary_mean_rounded = round(temporary_mean)
         difference = temporary_mean_rounded-mean_of_prev_means
-        lightness_index += 1
         temporary_means_list.append(temporary_mean)
         temporary_means_residuals.append(temporary_mean_rounded-max_of_prev_means if data_frame[Y].iloc[-1] < concentration else abs(difference))
         temporary_crop_cords_list.append(temporary_crop_cords)
