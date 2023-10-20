@@ -15,7 +15,7 @@ VAL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
 basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
 global total_images
 
-def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
+"""def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
     global total_images
     subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
     total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))]
@@ -25,7 +25,7 @@ def processFolder(folder_path, progress_bar, progress_status_bar, status_label, 
             continue
         else:
             return
-    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=Y)
+    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=Y)"""
 
 def processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent,data=DATA):
     try:
@@ -43,7 +43,11 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
             image_array = getFrame(image)
         else:
             image_array = imdecode(np.fromfile(image, dtype=np.uint8), -1)
-        debug(f"is Mean works till line 25")                       
+        debug(f"is Mean works till line 25") 
+        debug(f"PRINT {image}")
+        if type(image_array) != np.ndarray:
+            error(f"{image} DOES NOT WORK???")
+            return None                     
         mean, crop_cords = getMean(image, conc, data_frame=data, reagent=reagent, X=X, Y=Y, total_images=total_images)
         debug(f"is Mean works till line 27")  
         mean_label.setVisible(True)
@@ -72,9 +76,13 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
 
 def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_images=[]):
     image_name = image
+    debug(image_name)
     image = get_image_array(image)
+    debug(f"{type(image)}, {image_name}")
     hsv_img = cvtColor(image, 40)
+    debug(f"{type(image)}, {image_name} x2")
     mean, _, crop_cords = getPlainMean(image, reagent)
+    debug(f"{type(image)}, {image_name} x3")
     if len(data_frame) > 2:
         req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
         prev_conc_data = data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]

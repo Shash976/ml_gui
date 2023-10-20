@@ -6,7 +6,7 @@ import os
 from time import time
 from processing import makeExcel
 from processing import process_main
-from image_analysis import imdecode, np, is_float, Reagent, getPlainMean
+from image_analysis import imdecode, np, is_float, Reagent, getPlainMean, error, debug
 from model_def import ML_Model, x,y
 from PIL import Image
 import sys
@@ -27,6 +27,7 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
     global total_images, current_index, DATA, Y, X, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, start_time, folder_path, reagent
     # Initialize your state here, similar to what you do at the beginning of processFolder
     reagent = reagent_args
+    debug(f"REAGENT IS {reagent}")
     if os.path.exists(folder_path_args):
         folder_path = folder_path_args
         subfolder_paths = [os.path.join(folder_path, path) for path in os.listdir(folder_path) if any([is_float(p) for p in path.split(" ")]) if os.path.isdir(os.path.join(folder_path, path))]
@@ -37,10 +38,14 @@ def initialize_processing(folder_path_args, progress_bar_elemnt, progress_status
                     return float(part)
         subfolder_paths = sorted(subfolder_paths, key=extract_numeric_value)
         total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths for image in os.listdir(sub_folder) if image.lower().endswith((".jpg", ".png", ".jpeg", ".gif"))] 
-        if "auto" in reagent:
+        if "auto" in reagent.lower():
+            debug(f"Reagent has 'auto'")
             for r in Reagent.reagents:
+                debug(f"checking for {r.name}")
                 if getPlainMean(imdecode(np.fromfile(total_images[len(total_images)//2], dtype=np.uint8), -1), r.name)[1] > 0:
+                    debug(f"{r.name} works")
                     reagent = r.name
+                    debug(f"changed reagent to {reagent}")
                     break
         current_index = 0
         y_title = "Concentration"
@@ -77,6 +82,7 @@ def check_completion():
 
 def on_timeout():
     global progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent
+    debug(f"REAGENT IS {reagent}")
     partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent=reagent)
     check_completion()
     if current_index < len(total_images):
@@ -485,7 +491,7 @@ class MainWindow(QMainWindow):
         global DATA, folder_path
         if os.path.exists(self.image_folder_input.text()):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
-                initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText())
+                initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText().lower())
                 timer.start(1)
             elif self.image_folder_input.text().lower().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
                 self.image_folder_input.setDisabled(True)
