@@ -49,3 +49,4 @@ def download_predictions(x_val, predictions, parentPath):
         preds["Category"].append(model.category)
         preds["Prediction"].append(prediction)
     makeExcel(path, preds, sortby="Category")
+    os.startfile(os.path.split(path)[0])

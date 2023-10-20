@@ -12,7 +12,7 @@ Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
 VAL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
-basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
+basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=ERROR)
 global total_images
 
 """def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
@@ -78,11 +78,8 @@ def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_imag
     image_name = image
     debug(image_name)
     image = get_image_array(image)
-    debug(f"{type(image)}, {image_name}")
     hsv_img = cvtColor(image, 40)
-    debug(f"{type(image)}, {image_name} x2")
     mean, _, crop_cords = getPlainMean(image, reagent)
-    debug(f"{type(image)}, {image_name} x3")
     if len(data_frame) > 2:
         req_range = 5 if data_frame[Y].iloc[-1] == concentration else 20 if concentration-data_frame[Y].iloc[-1] >=0.25 else 8
         prev_conc_data = data_frame[data_frame[Y]==data_frame[Y].iloc[-1]]

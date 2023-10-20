@@ -477,13 +477,16 @@ class MainWindow(QMainWindow):
         if len(DATA) > 0:
             if type(DATA) != type(None):
                 if type(DATA) == str:
-                    f = open(f"{os.path.splitext(folder_path)[0]}_calucatedIntensity.txt", "w+")
+                    filename = f"{os.path.splitext(folder_path)[0]}_calucatedIntensity.txt"
+                    f = open(filename, "w+")
                     f.write(DATA)
                     f.close()
-                    self.footer_label.setText(f"Downloaded. Please check {os.path.splitext(folder_path)[0]}_calucatedIntensity.txt")
+                    self.footer_label.setText(f"Downloaded. Please check {filename}")
                 else:
+                    filename = os.path.join(folder_path, "data.xlsx")
                     makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")
                     self.footer_label.setText(f"Downloaded. Please check {os.path.join(folder_path, 'data.xlsx')}")
+                os.startfile(os.path.split(filename)[0])
             else:
                 self.footer_label.setText("Please calculate Image Intensities before saving data")
 
@@ -598,9 +601,7 @@ class MainWindow(QMainWindow):
             def open_graph_image(i):
                 path = f"{selected_models[i].name.strip().replace(' ', '_').strip().lower()}.jpg"
                 path = os.path.join(parentPath, path)
-                from PIL import Image
-                image_of_graph = Image.open(path)
-                image_of_graph.show()
+                os.startfile(path)
             self.hbox8 = QHBoxLayout()
             for i, m in enumerate(selected_models):
                 model_button = QPushButton(m.name)
@@ -609,6 +610,7 @@ class MainWindow(QMainWindow):
                     model_button.clicked.connect(lambda checked, n=i:open_graph_image(n))
                     self.hbox8.addWidget(model_button)
             self.data_layout.addLayout(self.hbox8)
+            os.startfile(parentPath)
             self.reset_tab_btn.setVisible(True)
         else:
             self.footer_label.setText("Please choose a number between 1 and 100 for test percentage")
