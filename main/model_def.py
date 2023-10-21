@@ -87,5 +87,5 @@ class Reagent:
             if reagent.name.lower().strip() == name.lower():
                 return reagent
             
-luminol = Reagent("Luminol", 110, 120)
+luminol = Reagent("Luminol", 110, 130)
 ruthenium = Reagent("Ruthenium", 0,20)
