@@ -6,13 +6,16 @@ from PyQt5.QtGui import QImage, QPixmap
 from util import crop_image, getFrame, get_image_array
 from PIL.Image import fromarray
 from model_def import Reagent
+from datetime import datetime
 import os
 
 Y = "Concentration"
 X = "Intensity"
 DATA = pd.DataFrame(columns=[Y, X])
 VAL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
-basicConfig(format='%(asctime)s - %(levelname)s - %(message)s', level=ERROR)
+if not os.path.exists("ECL Intensity Interface Cache"):
+    os.makedirs("ECL Intensity Interface Cache")
+basicConfig(filename=os.path.join(os.getcwd(), "ECL Intensity Interface Cache", f'Program Log {datetime.now().strftime("%Y_%m_%d %H_%M_%S")}.txt'),filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
 global total_images
 
 """def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
@@ -59,6 +62,7 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         debug(f"63, {type(im)}")
         im = im.resize((200*(im.height//im.width), 200))
         im = np.array(im)
+        debug(f"66, {type(im)} {im.size}")
         im = cvtColor(im,4)
         image_placeholder.setPixmap(QPixmap(numpy_to_qt_image(im)))
         image_placeholder.setVisible(True)

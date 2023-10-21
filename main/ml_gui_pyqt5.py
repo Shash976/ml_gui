@@ -6,7 +6,7 @@ import os
 from time import time
 from processing import makeExcel
 from processing import process_main
-from image_analysis import imdecode, np, is_float, Reagent, getPlainMean, error, debug
+from image_analysis import imdecode, np, is_float, Reagent, getPlainMean, error, debug, datetime
 from model_def import ML_Model, x,y
 from PIL import Image
 import sys

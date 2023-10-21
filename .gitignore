@@ -136,6 +136,8 @@ venv.bak/
 .ropeproject
 
 main/shift_stuff.ipynb
+ECL Intensity Interface Cache/
+
 # mkdocs documentation
 /site
 

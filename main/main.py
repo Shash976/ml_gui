@@ -1,5 +1,4 @@
-from ml_gui_pyqt5 import MainWindow, QApplication
-from datetime import datetime
+from ml_gui_pyqt5 import MainWindow, QApplication, datetime
 
 # Running the application
 if __name__ == "__main__":
