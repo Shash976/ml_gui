@@ -19,6 +19,7 @@ progress_bar, progress_status_bar, status_label, image_placeholder, mean_label =
 reagent = ''
 timer = QTimer()
 start_time = time()
+pause_resume_button = ''
 global X, Y
 X = x
 Y = y
@@ -74,21 +75,20 @@ def partial_processing(progress_bar, progress_status_bar, status_label, image_pl
 def check_completion():
     global current_index, total_images, start_time
     if current_index >= len(total_images):
-        # Call makeExcel and stop the timer
-        #from image_analysis import makeExcel
-        #makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")  # Assuming makeExcel is your function to create Excel
+        # stop the timer
         timer.stop()
-        MainWindow.pause_resume_analysis_button.setVisible(False)
+        pause_resume_button.setVisible(False)
         status_label.setText(f"Done within {round(time()-start_time, 2)} seconds. Data is ready to be saved.")
 
 def on_timeout():
     global progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent
     debug(f"REAGENT IS {reagent}")
+    start = time()
     partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent=reagent)
     check_completion()
     if current_index < len(total_images):
-        timer.start(1)  # Restart the timer to process the next chunk
-
+        timer.start(5)  # Restart the timer to process the next chunk
+        print(f"{time()-start} sec")
 timer.timeout.connect(on_timeout)
 
 def resource_path(relative_path):
@@ -504,10 +504,11 @@ class MainWindow(QMainWindow):
             self.pause_resume_analysis_button.setText("Pause Analysis")
 
     def check_path_image_input(self):
-        global DATA, folder_path
+        global DATA, folder_path, pause_resume_button
         if os.path.exists(self.image_folder_input.text()):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
                 self.pause_resume_analysis_button.setVisible(True)
+                pause_resume_button = self.pause_resume_analysis_button
                 print("PAUSE BUTTON VISIBLE")
                 initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText().lower())
                 timer.start(1)
