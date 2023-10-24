@@ -78,6 +78,7 @@ def check_completion():
         #from image_analysis import makeExcel
         #makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")  # Assuming makeExcel is your function to create Excel
         timer.stop()
+        MainWindow.pause_resume_analysis_button.setVisible(False)
         status_label.setText(f"Done within {round(time()-start_time, 2)} seconds. Data is ready to be saved.")
 
 def on_timeout():
@@ -213,11 +214,15 @@ class MainWindow(QMainWindow):
 
         self.perform_analysis_button  = QPushButton("Start Analysis")
         self.perform_analysis_button.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
+        self.pause_resume_analysis_button = QPushButton("Pause Analysis")
+        self.pause_resume_analysis_button.clicked.connect(self.pause_resume_analysis)
+        self.pause_resume_analysis_button.setVisible(False)
         self.image_save_data_btn = QPushButton("Save Data in Excel file.")
         self.image_save_data_btn.setSizePolicy(QSizePolicy.Policy.Fixed, QSizePolicy.Policy.Fixed)
         self.image_save_data_btn.clicked.connect(self.save_image_intensity_data)
         self.image_analysis_hbox1 = QHBoxLayout()
         self.image_analysis_hbox1.addWidget(self.perform_analysis_button)
+        self.image_analysis_hbox1.addWidget(self.pause_resume_analysis_button)
         self.image_analysis_hbox1.addWidget(self.image_save_data_btn)
         self.image_analysis_hbox1.setAlignment(Qt.AlignCenter)
         self.image_layout.addLayout(self.image_analysis_hbox1)
@@ -490,10 +495,20 @@ class MainWindow(QMainWindow):
             else:
                 self.footer_label.setText("Please calculate Image Intensities before saving data")
 
+    def pause_resume_analysis(self):
+        if "pause" in self.pause_resume_analysis_button.text().strip().lower():
+            timer.stop()
+            self.pause_resume_analysis_button.setText("Resume Analysis")
+        elif "resume" in self.pause_resume_analysis_button.text().strip().lower():
+            timer.start()
+            self.pause_resume_analysis_button.setText("Pause Analysis")
+
     def check_path_image_input(self):
         global DATA, folder_path
         if os.path.exists(self.image_folder_input.text()):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
+                self.pause_resume_analysis_button.setVisible(True)
+                print("PAUSE BUTTON VISIBLE")
                 initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText().lower())
                 timer.start(1)
             elif self.image_folder_input.text().lower().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):
