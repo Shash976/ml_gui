@@ -87,8 +87,7 @@ def on_timeout():
     partial_processing(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent=reagent)
     check_completion()
     if current_index < len(total_images):
-        timer.start(5)  # Restart the timer to process the next chunk
-        print(f"{time()-start} sec")
+        timer.start(0)  # Restart the timer to process the next chunk
 timer.timeout.connect(on_timeout)
 
 def resource_path(relative_path):
