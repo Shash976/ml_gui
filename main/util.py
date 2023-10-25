@@ -20,7 +20,7 @@ def is_float(x):
     except Exception as e:
         return False
     
-def crop_image(image_array, crop_cords, pad=10):
+def crop_image(image_array: np.ndarray, crop_cords: dict, pad=10):
     """Crops the image given by its coordinates.
 
     Args:

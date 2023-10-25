@@ -1,10 +1,11 @@
 from cv2 import cvtColor, inRange, imdecode, threshold, THRESH_BINARY, THRESH_OTSU,COLOR_BGR2GRAY
-from processing import makeExcel, os, np, pd
+from processing import os, np, pd
 from util import is_float
 from logging import basicConfig, INFO, WARNING, CRITICAL, ERROR, DEBUG, info, warning, error, critical, debug 
 from PyQt5.QtGui import QImage, QPixmap
 from util import crop_image, getFrame, get_image_array
 from PIL.Image import fromarray
+from PIL import Image
 from model_def import Reagent
 from datetime import datetime
 import os
@@ -16,28 +17,14 @@ VAL_RANGES = [210, 175,170, 160,140,80,55, 40, 20,10]
 if not os.path.exists("ECL Intensity Interface Cache"):
     os.makedirs("ECL Intensity Interface Cache")
 basicConfig(filename=os.path.join(os.getcwd(), "ECL Intensity Interface Cache", f'Program Log {datetime.now().strftime("%Y_%m_%d %H_%M_%S")}.txt'),filemode='a', format='%(asctime)s - %(levelname)s - %(message)s', level=DEBUG)
-global total_images
-
-"""def processFolder(folder_path, progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, reagent):
-    global total_images
-    subfolder_paths =  [os.path.join(folder_path, path) for path in os.listdir(folder_path) if os.path.isdir(os.path.join(folder_path, path))]
-    total_images = [os.path.join(sub_folder, image) for sub_folder in subfolder_paths if any(is_float(part) for part in os.path.basename(sub_folder).split(" ")) for image in os.listdir(sub_folder) if image.endswith((".jpg", ".png", ".jpeg", ".gif"))]
-    for i, image in enumerate(total_images):
-        data = processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent, DATA)
-        if data:
-            continue
-        else:
-            return
-    makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=data, sortby=Y)"""
 
 def processImage(progress_bar, progress_status_bar, status_label, image_placeholder, mean_label, total_images, i, image, reagent,data=DATA):
     try:
         conc=None
         for part in os.path.split(os.path.split(image)[0])[-1].split(" "):
-            try:
+            if is_float(part):
                 conc=float(part)
-            except:
-                continue
+                break
         if conc==None:
             return None
         status_label.setText("Processing....")
@@ -79,7 +66,7 @@ def processImage(progress_bar, progress_status_bar, status_label, image_placehol
         status_label.setText(f"{image} Error -> {e}")
         return None
 
-def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_images=[]):
+def getMean(image: str,concentration: float,reagent: str, data_frame=DATA, X = X, Y=Y, total_images: list = []):
     image_name = image
     debug(image_name)
     image = get_image_array(image)
@@ -123,7 +110,7 @@ def getMean(image,concentration,reagent, data_frame=DATA, X = X, Y=Y, total_imag
             crop_cords = new_crop_cords
     return mean, crop_cords
 
-def addWeights(image, concentration, data_frame, Y, hsv_img, mean, crop_cords, req_range, mean_of_prev_means, max_of_prev_means, next_image_mean, same_conc, reagent):
+def addWeights(image: np.ndarray, concentration: float, data_frame: pd.DataFrame, Y:str, hsv_img: np.ndarray, mean:float, crop_cords:dict, req_range: int, mean_of_prev_means:float, max_of_prev_means:float, next_image_mean:float, same_conc:bool, reagent:str):
     """Adds weights to the plain mean to get a more accurate value in comparision to neighboring images.
     
     Returns:
@@ -150,11 +137,11 @@ def addWeights(image, concentration, data_frame, Y, hsv_img, mean, crop_cords, r
                 temporary_mean = temporary_means_list[temporary_means_residuals.index(min([i for i in temporary_means_residuals if i >= 0]))]
             except:
                 temporary_mean = max(temporary_means_list)          
-        elif any([abs(temp_mean-next_image_mean)<=5 for temp_mean in temporary_means_list]):
-            next_mean_res = [abs(temp_mean-next_image_mean) for temp_mean in temporary_means_list]
-            for res in next_mean_res:
+        else:
+            for temp_mean in temporary_means_list:
+                res = abs(temp_mean-next_image_mean)
                 if res <= 5:
-                    temporary_mean = temporary_means_list[next_mean_res.index(res)]
+                    temporary_mean = temp_mean
                     debug(f"temporary_mean changed to {temporary_mean} due to pressure from next mean {next_image_mean}")
     debug(f"\tNew temporary_mean ({'equal' if same_conc else 'UNEQUAL'} conc): {temporary_mean}")
     temporary_crop_cords = temporary_crop_cords_list[temporary_means_list.index(temporary_mean)] if temporary_mean > 0 else max(temporary_means_list) if max(temporary_means_list) > 0 else crop_cords
@@ -163,7 +150,7 @@ def addWeights(image, concentration, data_frame, Y, hsv_img, mean, crop_cords, r
     debug("RETURNED")
     return mean,crop_cords
 
-def getPlainMean(image, reagent):
+def getPlainMean(image: np.ndarray, reagent:str):
     """Calculates and returns the plain mean independent of any concentration weights.
 
     Args:
@@ -186,7 +173,7 @@ def getPlainMean(image, reagent):
         i+=1
     return mean,area, crop_cords
 
-def calculateMean(image, hsv_image, lightness, reagent):
+def calculateMean(image: np.ndarray, hsv_image: np.ndarray, lightness: int, reagent: str):
     reagent = Reagent.get_reagent(reagent)
     if type(reagent) != Reagent:
         return False

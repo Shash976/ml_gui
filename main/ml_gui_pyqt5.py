@@ -508,7 +508,6 @@ class MainWindow(QMainWindow):
             if self.multiple_or_single_image_dropdown.currentText().lower() == "Multiple".lower():
                 self.pause_resume_analysis_button.setVisible(True)
                 pause_resume_button = self.pause_resume_analysis_button
-                print("PAUSE BUTTON VISIBLE")
                 initialize_processing(self.image_folder_input.text(), self.progress_bar, self.progress_label, self.footer_label, self.image_label, self.dynamic_label, self.reagent_dropdown.currentText().lower())
                 timer.start(1)
             elif self.image_folder_input.text().lower().strip().endswith(('.jpg', ".jpeg", ".png",".gif")):

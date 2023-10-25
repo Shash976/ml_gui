@@ -82,7 +82,7 @@ class Reagent:
         self.min_hue = min_hue
         self.max_hue = max_hue
         Reagent.reagents.append(self)
-    def get_reagent(name):
+    def get_reagent(name:str) -> type(reagents[0]):
         for reagent in Reagent.reagents:
             if reagent.name.lower().strip() == name.lower():
                 return reagent
