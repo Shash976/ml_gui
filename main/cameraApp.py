@@ -17,7 +17,6 @@ class CameraApp(QWidget):
 		super().__init__()
 		self.power_button = QPushButton("Power On Camera", self)
 		self.power_button.clicked.connect(self.start_recording)
-		
 
 		self.layout = QVBoxLayout(self)
 		self.layout.addWidget(self.power_button)
