@@ -7,6 +7,7 @@ import numpy as np
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 import time
+from image_analysis import getPlainMean
 
 picam2 = Picamera2()
 video_config = picam2.create_video_configuration()
@@ -27,8 +28,6 @@ class CameraApp(QWidget):
 		self.layout.addWidget(self.power_button)
 		self.layout.addWidget(self.pic_label)
 		
-		
-
 		# OpenCV widget
 		self.opencv_widget = QLabel(self)
 		self.layout.addWidget(self.opencv_widget)
@@ -65,11 +64,11 @@ class CameraApp(QWidget):
 		self.progress_bar_recording.setValue(progress_value)
 
 		if elapsed_time >= 10:
-		    self.timer_recording.stop()
-		    self.loading_label_recording.hide()
-		    self.progress_bar_recording.hide()
-		    self.pic_label.hide()
-		    self.stop_recording()
+			self.timer_recording.stop()
+			self.loading_label_recording.hide()
+			self.progress_bar_recording.hide()
+			self.pic_label.hide()
+			self.stop_recording()
 
 	def stop_recording(self):
 		picam2.stop_recording()
