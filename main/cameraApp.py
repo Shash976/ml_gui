@@ -7,6 +7,7 @@ import numpy as np
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
 import time
+from image_analysis import getPlainMean
 
 picam2 = Picamera2()
 video_config = picam2.create_video_configuration()
@@ -84,11 +85,14 @@ class CameraApp(QWidget):
                 light_blue = np.array([100, 50, 50])
                 dark_blue = np.array([130, 255, 255])
                 mask = cv2.inRange(hsv, light_blue, dark_blue)
-                mean_value = np.mean(mask)
+                mean_value = np.mean(frame[mask==255])
                 if max_intensity < mean_value:
                     max_intensity = mean_value
+                res = cv2.bitwise_and(frame, frame, mask=mask)
+                res_image = QImage(res.data, res.shape[1], res.shape[0], QImage.Format_RGB888)
                 mask_image = QImage(mask.data, mask.shape[1], mask.shape[0], QImage.Format_Indexed8)
-                pixmap = QPixmap.fromImage(mask_image)
+                concatenated_image = np.hstack((mask_image, res_image))
+                pixmap = QPixmap.fromImage(concatenated_image)
                 self.opencv_widget.setPixmap(pixmap)
                 self.opencv_widget.show()
                 QApplication.processEvents()  # Process events to update the GUI
