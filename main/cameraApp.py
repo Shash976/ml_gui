@@ -17,6 +17,11 @@ class CameraApp(QWidget):
 		super().__init__()
 		self.power_button = QPushButton("Power On Camera", self)
 		self.power_button.clicked.connect(self.start_recording)
+		self.pic_label = QLabel(self)
+		self.px= QPixmap("media/mmne.jpg")
+		self.pic_label.setPixmap(self.px)
+		self.pic_label.setMaximumHeight(200)
+		self.pic_label.setMaximumWidth(200)
 
 		self.layout = QVBoxLayout(self)
 		self.layout.addWidget(self.power_button)
