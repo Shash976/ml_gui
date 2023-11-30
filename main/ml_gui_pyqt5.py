@@ -106,7 +106,7 @@ class MainWindow(QMainWindow):
         self.setWindowTitle("ECL Predictive Analysis Interface")
         self.setWindowIcon(QIcon('mmne.jpg'))
         self.setGeometry(100, 100, 800, 600)
-        
+        self.setMaximumSize(1600, 1200)
         self.central_widget = QWidget(self)
         self.main_layout = QVBoxLayout()
 
@@ -408,16 +408,6 @@ class MainWindow(QMainWindow):
 
         self.prediction_tab.setLayout(self.prediction_layout)
 
-        # Real-time Image Analysis Tab
-        self.real_time_layout = QVBoxLayout(self)
-        self.camera_power_button = QPushButton("Power on Camera")
-        self.real_time_opencv_widget = QLabel()
-
-        self.real_time_opencv_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
-        self.real_time_opencv_widget.setAlignment(Qt.AlignCenter)
-        self.real_time_layout.addWidget(self.camera_power_button)
-        self.real_time_layout.addWidget(self.real_time_opencv_widget)
-
         #About Us Tab
         self.about_layout = QVBoxLayout()
 
@@ -460,6 +450,9 @@ class MainWindow(QMainWindow):
         self.hide_elements(self.prediction_hbox2, footer=False)
         self.hide_elements(self.prediction_hbox4)
         self.startup()
+        self.setGeometry(100, 100, 800, 600)
+        self.setMinimumSize(400,300)
+        self.setMaximumSize(1600, 1200)
 
     def startup(self):
         elements = self.getElements(self.prediction_layout)
