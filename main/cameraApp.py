@@ -47,7 +47,6 @@ class CameraApp(QWidget):
 		self.loading_label_recording.setText("Recording...")
 		
 		self.layout.addWidget(self.loading_label_recording)
-		self.layout.addWidget(self.pic_label)
 		self.layout.addWidget(self.progress_bar_recording)
 		
 
@@ -60,7 +59,6 @@ class CameraApp(QWidget):
 			self.timer_recording.stop()
 			self.loading_label_recording.hide()
 			self.progress_bar_recording.hide()
-			self.pic_label.hide()
 			self.stop_recording()
 
 	def stop_recording(self):
