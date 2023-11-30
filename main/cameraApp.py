@@ -34,7 +34,6 @@ class CameraApp(QWidget):
 
 		self.loading_label_recording = QLabel(self)
 		self.progress_bar_recording = QProgressBar(self)
-		self.loading_label_results = QLabel(self)
 		self.loading_label_results.setMaximumWidth(500)
 		
 		self.result_label = QLabel(self)
@@ -75,8 +74,6 @@ class CameraApp(QWidget):
 		self.calculate_results()
 
 	def calculate_results(self):
-		self.loading_label_results.setText("Electrochemiluminescence")
-		self.loading_label_results.show()
 		'''self.progress_bar_results.setRange(0, 100)
 		self.progress_bar_results.setValue(0)
 		self.progress_bar_results.show()'''
