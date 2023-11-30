@@ -4,10 +4,10 @@ from PyQt5.QtGui import QFont, QIcon, QPixmap
 from pandas import DataFrame, read_excel
 import os
 from time import time
-from processing import makeExcel
-from processing import process_main
+from processing import makeExcel,process_main
 from image_analysis import imdecode, np, is_float, Reagent, getPlainMean, error, debug, datetime
 from model_def import ML_Model, x,y
+from cameraApp import CameraApp
 from PIL import Image
 import sys
 
@@ -138,13 +138,16 @@ class MainWindow(QMainWindow):
 
         # Create tab widget and tabs
         self.tab_widget = QTabWidget()
+        self.real_time_tab = CameraApp()
         self.image_analysis_tab = QWidget()
         self.data_analysis_tab = QWidget()
         self.prediction_tab = QWidget()
         self.about_us_tab = QWidget()
+
         self.tab_widget.addTab(self.image_analysis_tab, "Image Analysis")
         self.tab_widget.addTab(self.data_analysis_tab, "Data Analysis")
         self.tab_widget.addTab(self.prediction_tab, "Prediction")
+        self.tab_widget.addTab(self.real_time_tab, "Real Time Analysis")
         self.tab_widget.addTab(self.about_us_tab, "About")
 
         # Layout for Image Analysis tab
@@ -404,6 +407,16 @@ class MainWindow(QMainWindow):
         self.prediction_layout.addLayout(self.prediction_vbox3)
 
         self.prediction_tab.setLayout(self.prediction_layout)
+
+        # Real-time Image Analysis Tab
+        self.real_time_layout = QVBoxLayout(self)
+        self.camera_power_button = QPushButton("Power on Camera")
+        self.real_time_opencv_widget = QLabel()
+
+        self.real_time_opencv_widget.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
+        self.real_time_opencv_widget.setAlignment(Qt.AlignCenter)
+        self.real_time_layout.addWidget(self.camera_power_button)
+        self.real_time_layout.addWidget(self.real_time_opencv_widget)
 
         #About Us Tab
         self.about_layout = QVBoxLayout()
