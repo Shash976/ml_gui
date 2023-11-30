@@ -144,10 +144,10 @@ class MainWindow(QMainWindow):
         self.prediction_tab = QWidget()
         self.about_us_tab = QWidget()
 
+        self.tab_widget.addTab(self.real_time_tab, "Real Time Analysis")
         self.tab_widget.addTab(self.image_analysis_tab, "Image Analysis")
         self.tab_widget.addTab(self.data_analysis_tab, "Data Analysis")
         self.tab_widget.addTab(self.prediction_tab, "Prediction")
-        self.tab_widget.addTab(self.real_time_tab, "Real Time Analysis")
         self.tab_widget.addTab(self.about_us_tab, "About")
 
         # Layout for Image Analysis tab
