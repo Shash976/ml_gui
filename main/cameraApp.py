@@ -21,8 +21,6 @@ class CameraApp(QWidget):
 		self.pic_label.setPixmap(self.px)
 		self.pic_label.setMaximumHeight(200)
 		self.pic_label.setMaximumWidth(200)
-
-
 		self.layout = QVBoxLayout(self)
 		self.layout.addWidget(self.power_button)
 		self.layout.addWidget(self.pic_label)
@@ -32,6 +30,7 @@ class CameraApp(QWidget):
 		self.layout.addWidget(self.opencv_widget)
 		self.loading_label_recording = QLabel(self)
 		self.progress_bar_recording = QProgressBar(self)
+		self.loading_label_results = QLabel(self)
 		self.loading_label_results.setMaximumWidth(500)
 		
 		self.result_label = QLabel(self)
@@ -67,6 +66,8 @@ class CameraApp(QWidget):
 		picam2.stop_recording()
 		self.calculate_results()
 	def calculate_results(self):
+		self.loading_label_results.setText("Electrochemiluminescence")
+		self.loading_label_results.show()
 		'''self.progress_bar_results.setRange(0, 100)
 		self.progress_bar_results.setValue(0)
 		self.progress_bar_results.show()'''
@@ -87,6 +88,7 @@ class CameraApp(QWidget):
 				light_blue = np.array([100, 50, 50])
 				dark_blue = np.array([130, 255, 255])
 				mask = cv2.inRange(hsv, light_blue, dark_blue)
+				mean_value = getPlainMean(frame, "Luminol")
 				mean_value, area, crop_cords = getPlainMean(frame, "Luminol")
 				if max_intensity < mean_value:
 					max_intensity = mean_value
