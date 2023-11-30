@@ -101,7 +101,7 @@ class CameraApp(QWidget):
 				light_blue = np.array([100, 50, 50])
 				dark_blue = np.array([130, 255, 255])
 				mask = cv2.inRange(hsv, light_blue, dark_blue)
-				mean_value = np.mean(mask)
+				mean_value = getPlainMean(frame, "Luminol")
 				if max_intensity < mean_value:
 					max_intensity = mean_value
 				mask_image = QImage(mask.data, mask.shape[1], mask.shape[0], QImage.Format_Indexed8)
