@@ -22,7 +22,6 @@ class CameraApp(QWidget):
 
 		self.layout = QVBoxLayout(self)
 		self.layout.addWidget(self.power_button)
-		self.layout.addWidget(self.pic_label)
 		
 		# OpenCV widget
 		self.opencv_widget = QLabel(self)
