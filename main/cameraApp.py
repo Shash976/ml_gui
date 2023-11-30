@@ -38,7 +38,6 @@ class CameraApp(QWidget):
 
 	def start_recording(self):
 		self.power_button.setEnabled(False)
-		self.pic_label.hide()
 		picam2.configure(video_config)
 		picam2.start_recording(encoder, 'test.h264')
 		self.record_start_time = time.time()
