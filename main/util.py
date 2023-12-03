@@ -1,5 +1,8 @@
 from cv2 import VideoCapture, imdecode
 import numpy as np
+from sys import platform
+import subprocess
+import os
 
 def getFrame(gif_path):
     gif = VideoCapture(gif_path)
@@ -43,3 +46,9 @@ def crop_image(image_array: np.ndarray, crop_cords: dict, pad=10):
 
 def get_image_array(image):
     return getFrame(image) if isinstance(image, str) and image.endswith(".gif") else imdecode(np.fromfile(image, dtype=np.uint8), -1) if isinstance(image, str) else image
+
+def open_window(path):
+    if any([platform.startswith(system) for system in ["os","darwin","linux"]]):
+        subprocess.call(["open", path])
+    elif "win" in platform:
+        os.startfile(path)
