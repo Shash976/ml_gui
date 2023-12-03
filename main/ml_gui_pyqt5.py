@@ -10,7 +10,7 @@ from model_def import ML_Model, x,y
 from cameraApp import CameraApp
 from PIL import Image
 import sys
-
+from util import open_window
 current_index = 0
 total_images = []
 DATA = DataFrame()
@@ -496,7 +496,7 @@ class MainWindow(QMainWindow):
                     filename = os.path.join(folder_path, "data.xlsx")
                     makeExcel(path=os.path.join(folder_path, "data.xlsx"), data=DATA, sortby="Concentration")
                     self.footer_label.setText(f"Downloaded. Please check {os.path.join(folder_path, 'data.xlsx')}")
-                os.startfile(os.path.split(filename)[0])
+                open_window(os.path.split(filename)[0])
             else:
                 self.footer_label.setText("Please calculate Image Intensities before saving data")
 
@@ -621,7 +621,7 @@ class MainWindow(QMainWindow):
             def open_graph_image(i):
                 path = f"{selected_models[i].name.strip().replace(' ', '_').strip().lower()}.jpg"
                 path = os.path.join(parentPath, path)
-                os.startfile(path)
+                open_window(path)
             self.hbox8 = QHBoxLayout()
             for i, m in enumerate(selected_models):
                 model_button = QPushButton(m.name)
@@ -630,7 +630,7 @@ class MainWindow(QMainWindow):
                     model_button.clicked.connect(lambda checked, n=i:open_graph_image(n))
                     self.hbox8.addWidget(model_button)
             self.data_layout.addLayout(self.hbox8)
-            os.startfile(parentPath)
+            open_window(parentPath)
             self.reset_tab_btn.setVisible(True)
         else:
             self.footer_label.setText("Please choose a number between 1 and 100 for test percentage")
