@@ -137,6 +137,7 @@ venv.bak/
 
 main/shift_stuff.ipynb
 ECL Intensity Interface Cache/
+main/ecl_log.txt
 
 # mkdocs documentation
 /site

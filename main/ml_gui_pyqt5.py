@@ -7,7 +7,6 @@ from time import time
 from processing import makeExcel,process_main
 from image_analysis import imdecode, np, is_float, Reagent, getPlainMean, error, debug, datetime
 from model_def import ML_Model, x,y
-from cameraApp import CameraApp
 from PIL import Image
 import sys
 from util import open_window
@@ -138,13 +137,17 @@ class MainWindow(QMainWindow):
 
         # Create tab widget and tabs
         self.tab_widget = QTabWidget()
-        self.real_time_tab = CameraApp()
         self.image_analysis_tab = QWidget()
         self.data_analysis_tab = QWidget()
         self.prediction_tab = QWidget()
         self.about_us_tab = QWidget()
 
-        self.tab_widget.addTab(self.real_time_tab, "Real Time Analysis")
+        try:
+            from cameraApp import CameraApp
+            self.real_time_tab = CameraApp()
+            self.tab_widget.addTab(self.real_time_tab, "Real Time Analysis")
+        except Exception as err:
+            debug(err)
         self.tab_widget.addTab(self.image_analysis_tab, "Image Analysis")
         self.tab_widget.addTab(self.data_analysis_tab, "Data Analysis")
         self.tab_widget.addTab(self.prediction_tab, "Prediction")
@@ -452,7 +455,7 @@ class MainWindow(QMainWindow):
         self.startup()
         self.setGeometry(100, 100, 800, 600)
         self.setMinimumSize(400,300)
-        self.setMaximumSize(1600, 1200)
+        self.setMaximumSize(2400, 1800)
 
     def startup(self):
         elements = self.getElements(self.prediction_layout)

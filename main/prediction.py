@@ -2,6 +2,7 @@ import joblib
 import os
 from processing import makeExcel
 import numpy as np
+from util import open_window
 
 def load(path):
     loaded_models = {}
@@ -49,4 +50,4 @@ def download_predictions(x_val, predictions, parentPath):
         preds["Category"].append(model.category)
         preds["Prediction"].append(prediction)
     makeExcel(path, preds, sortby="Category")
-    os.startfile(os.path.split(path)[0])
+    open_window(os.path.split(path)[0])
