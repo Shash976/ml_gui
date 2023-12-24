@@ -10,6 +10,8 @@ from model_def import ML_Model, x,y
 from PIL import Image
 import sys
 from util import open_window
+from image_analysis import numpy_to_qt_image
+
 current_index = 0
 total_images = []
 DATA = DataFrame()
@@ -111,14 +113,20 @@ class MainWindow(QMainWindow):
 
         #Fonts
         self.main_font = QFont("Calibri", pointSize=12, weight=30, italic=False)
-        
-        # Header
+        self.init_header()
+        self.init_tabs()
+        self.init_image_analysis_tab()
+        self.init_data_analysis_tab()
+        self.init_prediction_tab()
+        self.init_about_us_tab()
+        self.init_footer()
+
+    def init_header(self):
         self.header_bits_image = QLabel()
         i1 = Image.open(resource_path("media/bits_logo.jpg"))
         i1 = i1.resize((50, (50*i1.height//i1.width)))
-        from numpy import array
-        from image_analysis import numpy_to_qt_image
-        self.header_bits_image.setPixmap(QPixmap(numpy_to_qt_image(array(i1), swapped=False)))
+        
+        self.header_bits_image.setPixmap(QPixmap(numpy_to_qt_image(np.array(i1), swapped=False)))
         self.header_label = QLabel("ECL Predictive Analysis Interface", self)
         self.header_font = QFont("Calibri", pointSize=26, weight=100, italic=False)
         self.header_label.setFont(self.header_font)
@@ -126,7 +134,7 @@ class MainWindow(QMainWindow):
         self.header_lab_image = QLabel()
         i2 = Image.open(resource_path("media/mmne.jpg"))
         i2 = i2.resize((50, (50*i2.height//i2.width)))
-        self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
+        self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(np.array(i2), swapped=False)))
         self.header_lab_image.setAlignment(Qt.AlignRight)
         self.header_layout = QHBoxLayout()
         self.header_layout.addWidget(self.header_bits_image)
@@ -135,6 +143,7 @@ class MainWindow(QMainWindow):
         
         self.main_layout.addLayout(self.header_layout)
 
+    def init_tabs(self):
         # Create tab widget and tabs
         self.tab_widget = QTabWidget()
         self.image_analysis_tab = QWidget()
@@ -153,6 +162,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.prediction_tab, "Prediction")
         self.tab_widget.addTab(self.about_us_tab, "About")
 
+    def init_image_analysis_tab(self):
         # Layout for Image Analysis tab
         self.image_layout = QVBoxLayout()
         
@@ -234,6 +244,7 @@ class MainWindow(QMainWindow):
         
         self.image_analysis_tab.setLayout(self.image_layout)
 
+    def init_data_analysis_tab(self):
         # Layout for Data Analysis tab
         self.data_layout = QVBoxLayout()
         
@@ -324,6 +335,7 @@ class MainWindow(QMainWindow):
 
         self.data_analysis_tab.setLayout(self.data_layout)
         
+    def init_prediction_tab(self):   
         # Prediction tab
         self.prediction_layout = QVBoxLayout()
         
@@ -411,6 +423,7 @@ class MainWindow(QMainWindow):
 
         self.prediction_tab.setLayout(self.prediction_layout)
 
+    def init_about_us_tab(self):
         #About Us Tab
         self.about_layout = QVBoxLayout()
 
@@ -420,10 +433,10 @@ class MainWindow(QMainWindow):
 
         i1 = Image.open(resource_path("media/bits_logo.jpg"))
         i1 = i1.resize((250, 250*i1.height//i1.width))
-        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i1), swapped=False)))
+        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(np.array(i1), swapped=False)))
         i2 = Image.open(resource_path("media/mmne.jpg"))
         i2 = i2.resize((250, 250*i2.height//i2.width))
-        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(array(i2), swapped=False)))
+        self.bits_image_about.setPixmap(QPixmap(numpy_to_qt_image(np.array(i2), swapped=False)))
         self.organisation_logo_hbox.addWidget(self.bits_image_about)
         self.organisation_logo_hbox.addWidget(self.mmne_image_about)
         self.about_layout.addLayout(self.organisation_logo_hbox)
@@ -441,6 +454,7 @@ class MainWindow(QMainWindow):
         # Add tab widget to main layout
         self.main_layout.addWidget(self.tab_widget)
 
+    def init_footer(self):
         # Footer
         self.footer_label = QLabel(" ", self)
         self.footer_label.setAlignment(Qt.AlignCenter)
@@ -542,8 +556,7 @@ class MainWindow(QMainWindow):
                 from numpy import uint8
                 i5 = Image.fromarray(uint8(cvtColor(i5,4)))
                 i5 = i5.resize((200, (200*i5.height//i5.width)))
-                from numpy import array
-                from image_analysis import numpy_to_qt_image
+                from numpy import array 
                 self.image_label.setPixmap(QPixmap(numpy_to_qt_image(array(i5), swapped=False)))
                 self.image_label.setVisible(True)
                 self.dynamic_label.setVisible(True)
