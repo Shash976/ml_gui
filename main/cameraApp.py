@@ -62,9 +62,11 @@ class CameraApp(QWidget):
 			self.progress_bar_recording.hide()
 			self.pic_label.hide()
 			self.stop_recording()
+	
 	def stop_recording(self):
 		picam2.stop_recording()
 		self.calculate_results()
+	
 	def calculate_results(self):
 		self.loading_label_results.setText("Electrochemiluminescence")
 		self.loading_label_results.show()
@@ -75,6 +77,7 @@ class CameraApp(QWidget):
 		self.result_timer.timeout.connect(self.show_result)
 		self.result_timer.start(50)
 		self.result_start_time = time.time()
+	
 	def show_result(self):
 		elapsed_time = time.time() - self.result_start_time
 		'''progress_value = int((elapsed_time / 5) * 100)
@@ -115,6 +118,7 @@ class CameraApp(QWidget):
 			reset_button = QPushButton("Reset", self)
 			reset_button.clicked.connect(self.reset_interface)
 			self.layout.addWidget(reset_button)
+	
 	def reset_interface(self):
 		for i in reversed(range(self.layout.count())):
 			widget = self.layout.itemAt(i).widget()
@@ -122,10 +126,12 @@ class CameraApp(QWidget):
 				widget.setParent(None)
 		self.power_button.setEnabled(True)
 		self.layout.addWidget(self.power_button)
+
 def main():
 	app = QApplication(sys.argv)
 	window = CameraApp()
 	window.show()
 	sys.exit(app.exec_())
+
 if __name__ == "__main__":
 	main()
