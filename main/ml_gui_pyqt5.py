@@ -11,6 +11,7 @@ from PIL import Image
 import sys
 from util import open_window
 from image_analysis import numpy_to_qt_image
+from calibration import ImageMaskApp
 
 current_index = 0
 total_images = []
@@ -149,6 +150,7 @@ class MainWindow(QMainWindow):
         self.image_analysis_tab = QWidget()
         self.data_analysis_tab = QWidget()
         self.prediction_tab = QWidget()
+        self.calibration_tab = ImageMaskApp()
         self.about_us_tab = QWidget()
 
         try:
@@ -160,6 +162,7 @@ class MainWindow(QMainWindow):
         self.tab_widget.addTab(self.image_analysis_tab, "Image Analysis")
         self.tab_widget.addTab(self.data_analysis_tab, "Data Analysis")
         self.tab_widget.addTab(self.prediction_tab, "Prediction")
+        self.tab_widget.addTab(self.calibration_tab, "Calibrate")
         self.tab_widget.addTab(self.about_us_tab, "About")
 
     def init_image_analysis_tab(self):
