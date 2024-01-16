@@ -97,7 +97,8 @@ class ImageMaskApp(QWidget):
             self.color_space = 'LAB'
         elif self.hsvRadioButton.isChecked():
             self.color_space = 'HSV'
-        self.updateMask()
+        if hasattr(self, "image"):
+            self.updateMask()
 
     def updateMask(self):
         if hasattr(self, 'image'):
@@ -105,25 +106,25 @@ class ImageMaskApp(QWidget):
                 color_converted = cv2.cvtColor(self.image, cv2.COLOR_BGR2LAB)
             elif self.color_space =='HSV':
                 color_converted = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-        for i, label in enumerate(self.slider_labels):
-            label.setText(f"{self.slider_names[i]}: {str(self.sliders[i].value())}")
-        lower_bound = np.array([self.sliders[i].value() for i in range(0, 3)])
-        upper_bound = np.array([self.sliders[i].value() for i in range(3, 6)])
+            for i, label in enumerate(self.slider_labels):
+                label.setText(f"{self.slider_names[i]}: {str(self.sliders[i].value())}")
+            lower_bound = np.array([self.sliders[i].value() for i in range(0, 3)])
+            upper_bound = np.array([self.sliders[i].value() for i in range(3, 6)])
 
-        # Create mask
-        mask = cv2.inRange(color_converted, lower_bound, upper_bound)
+            # Create mask
+            mask = cv2.inRange(color_converted, lower_bound, upper_bound)
 
-        # Apply mask to get the resultant image
-        result = cv2.bitwise_and(self.image, self.image, mask=mask)
+            # Apply mask to get the resultant image
+            result = cv2.bitwise_and(self.image, self.image, mask=mask)
 
-        # Display the original image, mask, and resultant image
-        self.displayImage(self.image, self.imageLabel)
-        self.displayImage(mask, self.maskLabel)
-        self.displayImage(result, self.resultLabel)
+            # Display the original image, mask, and resultant image
+            self.displayImage(self.image, self.imageLabel)
+            self.displayImage(mask, self.maskLabel)
+            self.displayImage(result, self.resultLabel)
 
         # Calculate the mean of the result image where the mask is applied
-        mean_val = np.mean(result[mask == 255])
-        self.resultMeanLabel.setText(f'Mean: {mean_val:.2f}')
+            mean_val = np.mean(result[mask == 255])
+            self.resultMeanLabel.setText(f'Mean: {mean_val:.2f}')
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
