@@ -76,6 +76,7 @@ class CameraApp(QWidget):
 
 		cap = cv2.VideoCapture('test.h264')
 		max_intensity = 0.0
+		frames = []
 		while cap.isOpened():
 			ret, frame = cap.read()
 			if ret:
@@ -83,11 +84,10 @@ class CameraApp(QWidget):
 				light_blue = np.array([100, 50, 50])
 				dark_blue = np.array([130, 255, 255])
 				mask = cv2.inRange(hsv, light_blue, dark_blue)
-				mean_value = np.mean(mask)
-				if max_intensity < mean_value:
-					max_intensity = mean_value
-				mask_image = QImage(mask.data, mask.shape[1], mask.shape[0], QImage.Format_Indexed8)
-				pixmap = QPixmap.fromImage(mask_image)
+				res = cv2.bitwise_and(frame, frame, mask=mask)
+				res_image = QImage(res.data, res.shape[1], res.shape[0], QImage.Format_Indexed8)
+				pixmap = QPixmap.fromImage(res_image)
+				frames.append(res.astype(np.uint8))
 				self.opencv_widget.setPixmap(pixmap)
 				self.opencv_widget.setMaximumHeight(200)
 				self.opencv_widget.setMaximumWidth(200)
@@ -96,6 +96,8 @@ class CameraApp(QWidget):
 				cv2.waitKey(50)
 			else:
 				break
+		frames = np.array(frames).astype(np.uint8)
+		max_intensity = np.max(frames, axis=0)
 		cap.release()
 		cv2.destroyAllWindows()
 
