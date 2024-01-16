@@ -85,7 +85,7 @@ class CameraApp(QWidget):
 				dark_blue = np.array([0,0,100])
 				mask = cv2.inRange(l_a_b, light_blue, dark_blue)
 				res = cv2.bitwise_and(frame, frame, mask=mask)
-				res_image = QImage(res.data, res.shape[2], res.data[0], 3*res.shape[2], QImage.Format_RGB888).rgbSwapped()
+				res_image = QImage(res.data, res.shape[1], res.data[0], QImage.Format_RGB888).rgbSwapped()
 				pixmap = QPixmap.fromImage(res_image)
 				frames.append(res.astype(np.uint8))
 				self.opencv_widget.setPixmap(pixmap)
