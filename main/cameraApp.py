@@ -80,10 +80,10 @@ class CameraApp(QWidget):
 		while cap.isOpened():
 			ret, frame = cap.read()
 			if ret:
-				hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-				light_blue = np.array([100, 50, 50])
-				dark_blue = np.array([130, 255, 255])
-				mask = cv2.inRange(hsv, light_blue, dark_blue)
+				l_a_b = cv2.cvtColor(frame, cv2.COLOR_BGR2LAB)
+				light_blue = np.array([0,0,0])
+				dark_blue = np.array([0,0,100])
+				mask = cv2.inRange(l_a_b, light_blue, dark_blue)
 				res = cv2.bitwise_and(frame, frame, mask=mask)
 				res_image = QImage(res.data, res.shape[1], res.shape[0], QImage.Format_Indexed8)
 				pixmap = QPixmap.fromImage(res_image)
@@ -97,7 +97,7 @@ class CameraApp(QWidget):
 			else:
 				break
 		frames = np.array(frames).astype(np.uint8)
-		max_intensity = np.max(frames, axis=0)
+		max_intensity = np.mean(np.max(frames, axis=0))
 		cap.release()
 		cv2.destroyAllWindows()
 
