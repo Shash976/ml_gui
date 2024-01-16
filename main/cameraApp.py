@@ -50,9 +50,9 @@ class CameraApp(QWidget):
 
 		if elapsed_time >= 10:
 		    self.timer_recording.stop()
-			self.loading_label_recording.hide()
-			self.progress_bar_recording.hide()
-			self.stop_recording()
+		    self.loading_label_recording.hide()
+		    self.progress_bar_recording.hide()
+		    self.stop_recording()
 
 	def stop_recording(self):
 		picam2.stop_recording()
