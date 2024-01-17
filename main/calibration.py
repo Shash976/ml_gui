@@ -1,19 +1,18 @@
-
 import sys
 import cv2
 import numpy as np
-from PyQt5.QtWidgets import (
-    QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QLabel,
-    QSlider, QFileDialog, QRadioButton, QButtonGroup
-)
+from PyQt5.QtWidgets import (QApplication, QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+                             QLabel, QSlider, QFileDialog, QRadioButton, QLineEdit)
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPixmap, QImage
+from PyQt5.QtGui import QPixmap, QImage, QIntValidator
 
 class ImageMaskApp(QWidget):
     def __init__(self):
         super().__init__()
         self.color_space = 'LAB'  # Default color space
         self.initUI()
+        self.setGeometry(100, 100, 800, 600)
+        self.setMaximumSize(1600, 1200)
 
     def initUI(self):
         main_layout = QVBoxLayout()
@@ -47,34 +46,36 @@ class ImageMaskApp(QWidget):
         self.resultMeanLabel = QLabel('Mean: N/A')
         main_layout.addWidget(self.resultMeanLabel)
 
-        # Sliders
+        # Sliders and input fields
         slider_layout = QVBoxLayout()
-        self.slider_names = [
-            "Lower 1st Channel", "Lower 2nd Channel", "Lower 3rd Channel",
-            "Upper 1st Channel", "Upper 2nd Channel", "Upper 3rd Channel"
-    ]
-
         self.sliders = []
-        self.slider_labels = []
-        for i, name in enumerate(self.slider_names):
+        self.slider_inputs = []
+        for i in range(6):
             row_layout = QHBoxLayout()
-            label = QLabel(name)
+
+            # Slider
             slider = QSlider(Qt.Horizontal)
             slider.setMinimum(0)
             slider.setMaximum(255)
             slider.setValue(255 if i >= 3 else 0)  # Upper sliders initialized to max
             slider.valueChanged.connect(self.updateMask)
             self.sliders.append(slider)
-            self.slider_labels.append(label)
-            row_layout.addWidget(label)
+
+            # Input field for the slider
+            input_field = QLineEdit('255' if i >= 3 else '0')
+            input_field.setValidator(QIntValidator(0, 255))
+            input_field.setMaximumWidth(50)
+            input_field.textChanged.connect(lambda value, s=slider: self.onInputChanged(value, s))
+            self.slider_inputs.append(input_field)
+
+            # Add to row layout
             row_layout.addWidget(slider)
+            row_layout.addWidget(input_field)
             slider_layout.addLayout(row_layout)
-
         main_layout.addLayout(slider_layout)
-
         self.setLayout(main_layout)
         self.setWindowTitle('Color Space Masking')
-        #self.setGeometry(300, 300, 900, 600)
+        self.setGeometry(300, 300, 900, 600)
 
     def loadImage(self):
         fname, _ = QFileDialog.getOpenFileName(self, 'Open file', '/home')
@@ -82,6 +83,7 @@ class ImageMaskApp(QWidget):
             self.image = cv2.imread(fname)
             self.displayImage(self.image, self.imageLabel)
             self.updateMask()
+            self.setMaximumSize(1600, 1200)
 
     def displayImage(self, image, label):
         if image is not None:
@@ -97,17 +99,19 @@ class ImageMaskApp(QWidget):
             self.color_space = 'LAB'
         elif self.hsvRadioButton.isChecked():
             self.color_space = 'HSV'
-        if hasattr(self, "image"):
-            self.updateMask()
+        self.updateMask()
 
     def updateMask(self):
         if hasattr(self, 'image'):
             if self.color_space == 'LAB':
                 color_converted = cv2.cvtColor(self.image, cv2.COLOR_BGR2LAB)
-            elif self.color_space =='HSV':
+            elif self.color_space == 'HSV':
                 color_converted = cv2.cvtColor(self.image, cv2.COLOR_BGR2HSV)
-            for i, label in enumerate(self.slider_labels):
-                label.setText(f"{self.slider_names[i]}: {str(self.sliders[i].value())}")
+            
+            # Update slider values
+            for i, slider_input in enumerate(self.slider_inputs):
+                slider_input.setText(str(self.sliders[i].value()))
+
             lower_bound = np.array([self.sliders[i].value() for i in range(0, 3)])
             upper_bound = np.array([self.sliders[i].value() for i in range(3, 6)])
 
@@ -122,9 +126,13 @@ class ImageMaskApp(QWidget):
             self.displayImage(mask, self.maskLabel)
             self.displayImage(result, self.resultLabel)
 
-        # Calculate the mean of the result image where the mask is applied
+            # Calculate the mean of the result image where the mask is applied
             mean_val = np.mean(result[mask == 255])
             self.resultMeanLabel.setText(f'Mean: {mean_val:.2f}')
+
+    def onInputChanged(self, value, slider):
+        if value:
+            slider.setValue(int(value))
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
