@@ -128,6 +128,7 @@ class MainWindow(QMainWindow):
         i1 = i1.resize((50, (50*i1.height//i1.width)))
         
         self.header_bits_image.setPixmap(QPixmap(numpy_to_qt_image(np.array(i1), swapped=False)))
+        self.header_bits_image.setVisible(True)
         self.header_label = QLabel("ECL Predictive Analysis Interface", self)
         self.header_font = QFont("Calibri", pointSize=26, weight=100, italic=False)
         self.header_label.setFont(self.header_font)
@@ -137,6 +138,7 @@ class MainWindow(QMainWindow):
         i2 = i2.resize((50, (50*i2.height//i2.width)))
         self.header_lab_image.setPixmap(QPixmap(numpy_to_qt_image(np.array(i2), swapped=False)))
         self.header_lab_image.setAlignment(Qt.AlignRight)
+        self.header_lab_image.setVisible(True)
         self.header_layout = QHBoxLayout()
         self.header_layout.addWidget(self.header_bits_image)
         self.header_layout.addWidget(self.header_label)
