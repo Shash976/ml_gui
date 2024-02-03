@@ -92,7 +92,7 @@ class CameraApp(QWidget):
                 #    max_intensity = mean_value
                 #mask_image = QImage(mask.data, mask.shape[1], mask.shape[0], QImage.Format_Indexed8)
                 frames.append(res)
-                pixmap = QPixmap.fromImage(numpy_to_qt_image(bright_frame))
+                pixmap = QPixmap.fromImage(numpy_to_qt_image(frame))
                 self.opencv_widget.setPixmap(pixmap)
                 self.opencv_widget.setMaximumHeight(200)
                 self.opencv_widget.setMaximumWidth(200)
