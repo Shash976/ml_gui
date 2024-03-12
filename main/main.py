@@ -5,6 +5,7 @@ if __name__ == "__main__":
     try:
         app = QApplication([])
         window = MainWindow()
+        window.showMaximized()
         window.show()
         app.exec_()
     except Exception as error:
