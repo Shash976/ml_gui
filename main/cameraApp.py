@@ -73,7 +73,7 @@ class CameraApp(QWidget):
             self.button.setEnabled(True)
             self.button.setText("Start recording")
             self.init_video_timer()
-            open_window("image.jpg")
+            #open_window("image.jpg")
             self.recording = False
 
     def video_timer_timeout(self):
