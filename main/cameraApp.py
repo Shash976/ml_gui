@@ -1,157 +1,136 @@
-import sys
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout, QPushButton, QLabel, QProgressBar
-from PyQt5.QtCore import QTimer, Qt
-from PyQt5.QtGui import QImage, QPixmap
-import cv2
-import numpy as np
+#!/usr/bin/python3
+
+from PyQt5 import QtCore
+from PyQt5.QtWidgets import (QApplication, QHBoxLayout, QLabel, QPushButton,
+                             QVBoxLayout, QWidget)
+from PyQt5.QtCore import QTimer
+
 from picamera2 import Picamera2
 from picamera2.encoders import H264Encoder
-import time
-import random
+from picamera2.outputs import FileOutput
+from picamera2.previews.qt import QGlPicamera2
+import cv2
+import numpy as np
+from sys import platform
+import subprocess
+import os
 
-picam2 = Picamera2()
-video_config = picam2.create_video_configuration()
-encoder = H264Encoder(10000000)
 
 class CameraApp(QWidget):
     def __init__(self):
         super().__init__()
-        self.power_button = QPushButton("Start Recording", self)
-        self.power_button.clicked.connect(self.start_recording)
 
-        self.layout = QVBoxLayout(self)
-        self.layout.addWidget(self.power_button)
+        self.picam2 = Picamera2()
+        #self.picam2.post_callback = self.post_callback
+        self.picam2.configure(self.picam2.create_video_configuration(main={"size": (1280, 720)}))
 
-        # OpenCV widget
-        self.opencv_widget = QLabel(self)
-        self.layout.addWidget(self.opencv_widget)
+        
+        self.qpicamera2 = QGlPicamera2(self.picam2, width=800, height=480, keep_ar=False)
+        self.button = QPushButton("Start recording")
+        self.button.clicked.connect(self.on_button_clicked)
+        self.video_label = QLabel()
+        self.result_label = QLabel()
+        self.setWindowTitle("Qt Picamera2 App")
+        self.recording = False
 
-        self.loading_label_recording = QLabel(self)
-        self.progress_bar_recording = QProgressBar(self)
-        self.loading_label_results = QLabel(self)
-        self.progress_bar_results = QProgressBar(self)
-        self.result_label = QLabel(self)
+        self.init_video_timer()
+        self.init_result_timer()
 
-    def start_recording(self):
-        self.power_button.setEnabled(False)
-        picam2.configure(video_config)
-        picam2.start_recording(encoder, 'video.h264')
-        self.record_start_time = time.time()
-        self.timer_recording = QTimer(self)
-        self.timer_recording.timeout.connect(self.record_for_10_seconds)
-        self.timer_recording.start(100)
-        self.loading_label_recording.setText("Recording...")
-        self.layout.addWidget(self.loading_label_recording)
-        self.layout.addWidget(self.progress_bar_recording)
+        self.result_label.setAlignment(QtCore.Qt.AlignTop)
+        layout_vertical = QVBoxLayout()
+        layout_horizontal = QHBoxLayout()
+        layout_horizontal.addWidget(self.result_label)
+        layout_horizontal.addWidget(self.video_label)
+        layout_horizontal.addWidget(self.button)
+        layout_vertical.addWidget(self.qpicamera2)
+        layout_vertical.addLayout(layout_horizontal)
+        self.setLayout(layout_vertical)
 
-    def record_for_10_seconds(self):
-        elapsed_time = time.time() - self.record_start_time
-        progress_value = int((elapsed_time / 10) * 100)
-        self.progress_bar_recording.setValue(progress_value)
+        self.picam2.start()
 
-        if elapsed_time >= 10:
-                  self.timer_recording.stop()
-                  self.loading_label_recording.hide()
-                  self.progress_bar_recording.hide()
-                  self.stop_recording()
+    def init_video_timer(self):
+        self.current_time = 0
+        self.video_label.setText("Please start recording")
+        self.video_timer = QTimer()
+        self.video_timer.timeout.connect(self.video_timer_timeout)
 
-    def stop_recording(self):
-            picam2.stop_recording()
-            self.calculate_results()
+    def post_callback(self, request):
+        self.result_label.setText(''.join(f"{k}: {v}\n" for k, v in request.get_metadata().items()))
 
-    def calculate_results(self):
-      self.loading_label_results.setText("Calculating Results...")
-      self.loading_label_results.show()
-      self.progress_bar_results.setRange(0, 100)
-      self.progress_bar_results.setValue(0)
-      '''self.progress_bar_results.show()'''
+    def on_button_clicked(self):
+        if not self.recording:
+            encoder = H264Encoder(10000000)
+            output = FileOutput("test.h264")
+            self.picam2.start_encoder(encoder, output)
+            self.init_result_timer()
+            self.init_video_timer()
+            self.button.setText("Recording..")
+            self.button.setEnabled(False)
+            self.recording = True
+            self.video_timer.start(1200)
+        else:
+            self.picam2.stop_encoder()
+            self.button.setEnabled(True)
+            self.button.setText("Start recording")
+            self.init_video_timer()
+            open_window("image.jpg")
+            self.recording = False
 
-      self.result_timer = QTimer(self)
-      self.result_timer.timeout.connect(self.show_result)
-      self.result_timer.start(50)
-      self.result_start_time = time.time()
+    def video_timer_timeout(self):
+        self.current_time +=1
+        to_add = f"Recording.. {self.current_time}"
+        self.video_label.setText(to_add)
+        if self.current_time==10:
+            self.video_timer.stop()
+            self.current_time=0
+            self.picam2.stop_encoder()
+            self.cap = cv2.VideoCapture('test.h264')
+            self.frames = []
+            self.max_intensity = 0.0
+            self.result_timer.start(10)
+            self.result_label.setText(f"Intensity is {self.max_intensity} RLU")
+            self.on_button_clicked()
 
-    def show_result(self):
-        elapsed_time = time.time() - self.result_start_time
-        progress_value = int((elapsed_time / 5) * 100)
-        self.progress_bar_results.setValue(progress_value)
+    def init_result_timer(self):
+        self.result_timer = QTimer()
+        self.result_timer.timeout.connect(self.process_frame)
+        self.result_label.setText("")
+        
 
-        cap = cv2.VideoCapture('video.h264')
-        max_intensity = 0.0
-        frames = []
-        while cap.isOpened():
-            ret, frame = cap.read()
-            if ret:
-                hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
-                light_blue = np.array([100, 50, 50])
-                dark_blue = np.array([130, 255, 255])
-                mask = cv2.inRange(hsv, light_blue, dark_blue)
-                #mean_value = np.mean(frame[mask==255])
-                res = cv2.bitwise_and(frame,frame, mask=mask)
-                #if max_intensity < mean_value:
-                #    max_intensity = mean_value
-                #mask_image = QImage(mask.data, mask.shape[1], mask.shape[0], QImage.Format_Indexed8)
-                frames.append(res)
-                pixmap = QPixmap.fromImage(numpy_to_qt_image(frame))
-                self.opencv_widget.setPixmap(pixmap)
-                self.opencv_widget.setMaximumHeight(200)
-                self.opencv_widget.setMaximumWidth(200)
-                self.opencv_widget.show()
-                QApplication.processEvents()  # Process events to update the GUI
-                cv2.waitKey(50)
-            else:
-                break
-        maximum_frame = np.max(np.array(frames), axis=0)
-        #maximum_frame = cv2.imread('/home/abhishek/Desktop/stable/ml_gui/main/test.jpg')
-        #print(maximum_frame.shape)
-        pixmap = QPixmap.fromImage(numpy_to_qt_image(maximum_frame))
-        self.opencv_widget.setPixmap(pixmap)
-        self.opencv_widget.setMaximumHeight(200)
-        self.opencv_widget.setMaximumWidth(200)
-        max_intensity = np.mean(maximum_frame)
-        cap.release()
-        cv2.destroyAllWindows()
-
-        if elapsed_time >= 5:
+    def process_frame(self):
+        ret, frame = self.cap.read()
+        if ret:
+            res = self.single_frame(frame)
+            self.frames.append(res.astype(np.uint8))
+              # Process events to update the GUI
+            self.result_label.setText("Processing....")
+            cv2.waitKey(20)
+        else:
+            self.frames = np.array(self.frames).astype(np.uint8)
+            max_frame = np.max(self.frames, axis=0)
+            self.max_intensity = np.round(np.mean(max_frame), 2)
+            cv2.imwrite("image.jpg", max_frame)
+            self.cap.release()
+            cv2.destroyAllWindows()
             self.result_timer.stop()
-            self.loading_label_results.hide()
-            self.progress_bar_results.hide()
+            self.result_label.setText(f"Intensity is {self.max_intensity} RLU")
 
-            # Simulate background calculation
-            time.sleep(2)
+    def single_frame(self, frame):
+        hsv = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+        light_blue = np.array([100, 50, 50])
+        dark_blue = np.array([130, 255, 255])
+        mask = cv2.inRange(hsv, light_blue, dark_blue)
+        res = cv2.bitwise_and(frame, frame, mask=mask)
+        return res
 
-            self.result_label.setText(f"Maximum intensity light: {max_intensity}")
-            self.layout.addWidget(self.result_label)
-
-            reset_button = QPushButton("Reset", self)
-            reset_button.clicked.connect(self.reset_interface)
-            self.layout.addWidget(reset_button)
-
-    def reset_interface(self):
-        for i in reversed(range(self.layout.count())):
-            widget = self.layout.itemAt(i).widget()
-            if widget is not None:
-                widget.setParent(None)
-
-        self.power_button.setEnabled(True)
-        self.layout.addWidget(self.power_button)
-
-def numpy_to_qt_image(image, swapped=True):
-    if len(image.shape) < 3:
-        image = np.stack((image,)*3, axis=-1)
-    height, width, channel = image.shape
-    bytesPerLine = 3 * width
-    if not swapped:
-        return QImage(image.data, width, height, bytesPerLine, QImage.Format_RGB888)
-    return QImage(image.data, width, height, bytesPerLine, QImage.Format_RGB888).rgbSwapped()
-
-
-def main():
-    app = QApplication(sys.argv)
-    window = CameraApp()
-    window.show()
-    sys.exit(app.exec_())
+def open_window(path):
+    if any([platform.startswith(system) for system in ["os","darwin","linux"]]):
+        subprocess.call(["open", path])
+    elif "win" in platform:
+        os.startfile(path)
 
 if __name__ == "__main__":
-    main()
-
+    app = QApplication([])
+    camera_app = CameraApp()
+    camera_app.show()
+    app.exec()
